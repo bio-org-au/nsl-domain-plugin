@@ -109,10 +109,11 @@ select string_agg('  ' ||
                   syn.full_name ||
                   (case
                      when syn.name_status = 'legitimate' then ''
+                     when syn.name_status = '[n/a]' then ''
                      else ' ' || syn.name_status end) ||
                   (case
                      when syn.misapplied then syn.citation
-                     else '' end), E'\n')
+                     else '' end), E'\n') || E'\n'
 from apni_ordered_synonymy(instanceid) syn;
 $$;
 
@@ -169,11 +170,12 @@ select string_agg('  ' ||
                   syn.full_name ||
                   (case
                      when syn.name_status = 'legitimate' then ''
+                     when syn.name_status = '[n/a]' then ''
                      else ' ' || syn.name_status end) ||
                   (case
                      when syn.misapplied
                              then 'by ' || syn.citation
-                     else '' end), E'\n')
+                     else '' end), E'\n') || E'\n'
 from apni_synonym(instanceid) syn;
 $$;
 
@@ -265,6 +267,113 @@ FROM Instance i,
 WHERE i.id = instance_id
   AND syn_inst.cited_by_id = i.id
   AND synonym.id = syn_inst.name_id;
+$$;
+
+-- instance notes
+
+drop function if exists type_notes(bigint);
+create function type_notes(instanceid bigint)
+  returns TABLE(note_key text,
+                note     text)
+language sql
+as $$
+select k.name, nt.value
+from instance_note nt
+       join instance_note_key k on nt.instance_note_key_id = k.id
+where nt.instance_id = instanceid
+  and k.name ilike '%type'
+$$;
+
+drop function if exists type_notes_text(bigint);
+create function type_notes_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
+from type_notes(instanceid) as nt
+$$;
+
+
+drop function if exists non_type_notes(bigint);
+create function non_type_notes(instanceid bigint)
+  returns TABLE(note_key text,
+                note     text)
+language sql
+as $$
+select k.name, nt.value
+from instance_note nt
+       join instance_note_key k on nt.instance_note_key_id = k.id
+where nt.instance_id = instanceid
+  and k.name not ilike '%type'
+$$;
+
+drop function if exists non_type_notes_text(bigint);
+create function non_type_notes_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
+from non_type_notes(instanceid) as nt
+$$;
+
+-- profile stuff
+
+drop function if exists latest_accepted_profile(bigint);
+create function latest_accepted_profile(instanceid bigint)
+  returns table(comment_key text, comment_value text, dist_key text, dist_value text)
+language sql
+as $$
+select config ->> 'comment_key'                                 as comment_key,
+       (profile -> (config ->> 'comment_key')) ->> 'value'      as comment_value,
+       config ->> 'distribution_key'                            as dist_key,
+       (profile -> (config ->> 'distribution_key')) ->> 'value' as dist_value
+from tree_version_element tve
+       join tree_element te on tve.tree_element_id = te.id
+       join tree_version tv on tve.tree_version_id = tv.id and tv.published
+       join tree t on tv.tree_id = t.id and t.accepted_tree
+where te.instance_id = instanceid
+order by tv.id desc
+limit 1
+$$;
+
+
+drop function if exists latest_accepted_profile_text(bigint);
+create function latest_accepted_profile_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select '  ' ||
+       case
+         when comment_value is not null
+                 then comment_key || ': ' || comment_value
+         else ''
+           end ||
+       case
+         when dist_value is not null
+                 then dist_key || ': ' || dist_value
+         else ''
+           end ||
+       E'\n'
+from latest_accepted_profile(instanceid)
+$$;
+
+-- apni details as text output
+
+drop function if exists apni_detail_text(bigint);
+create function apni_detail_text(nameid bigint)
+  returns text
+language sql
+as $$
+select string_agg(' ' ||
+                  refs.citation ||
+                  ': ' ||
+                  refs.page || E'\n' ||
+                  coalesce(type_notes_text(refs.instance_id), '') ||
+                  coalesce(apni_ordered_synonymy_text(refs.instance_id), apni_synonym_text(refs.instance_id), '') ||
+                  coalesce(non_type_notes_text(refs.instance_id), '') ||
+                  coalesce(latest_accepted_profile_text(refs.instance_id), ''),
+                  E'\n')
+from apni_ordered_refrences(nameid) refs
 $$;
 
 -- re-write the synonymy html based on the synonymy at the time
