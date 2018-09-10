@@ -1467,48 +1467,234 @@ $body$;
 -- select audit.audit_table('reference');
 
 -- functions.sql
-drop function if exists synonym_as_html( bigint );
+-- NSL-752 NSL-2894
+-- functions to get ordered output as needed by the APNI format
+-- find the group name for a name based on the basionym
+drop function if exists nom_group(bigint);
+create function nom_group(nameid bigint)
+  returns table(nom_name text, nom_id bigint)
+language sql
+as $$
+select coalesce(bas_name.sort_name, primary_name.sort_name), coalesce(bas_name.id, primary_inst.name_id)
+from instance primary_inst
+       left join instance bas_inst
+       join name bas_name on bas_inst.name_id = bas_name.id
+       join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name = 'basionym'
+         on bas_inst.cited_by_id = primary_inst.id
+       join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
+       join name primary_name on primary_name.id = nameid
+where primary_inst.name_id = nameid
+limit 1;
+$$;
+
+-- find the name an orth var or alt name is of
+
+drop function if exists orth_or_alt_of(bigint);
+create function orth_or_alt_of(nameid bigint)
+  returns bigint
+language sql
+as $$
+select alt_of_inst.name_id
+from name n
+       join name_status ns on n.name_status_id = ns.id
+       join instance alt_inst on n.id = alt_inst.name_id
+       join instance_type alt_it
+         on alt_inst.instance_type_id = alt_it.id and alt_it.name in ('orthographic variant', 'alternative name')
+       join instance alt_of_inst on alt_of_inst.id = alt_inst.cited_by_id
+where n.id = nameid
+  and ns.name in ('orth. var.', 'nom. alt.');
+$$;
+
+-- get the synonyms of a name in flora order for apni
+
+drop function if exists apni_ordered_synonymy(bigint);
+
+create function apni_ordered_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
+                misapplied       boolean,
+                group_name       text,
+                group_head       boolean,
+                group_id         bigint)
+language sql
+as $$
+select i.id,
+       it.has_label     as instance_type,
+       it.id            as instance_type_id,
+       n.id             as name_id,
+       n.full_name,
+       n.full_name_html,
+       ns.name          as name_status,
+       r.citation,
+       r.citation_html,
+       r.year,
+       cites.page,
+       n.sort_name,
+       it.misapplied,
+       ng.nom_name      as group_name,
+       ng.nom_id = n.id as group_head,
+       ng.nom_id        as group_id
+from instance i
+       join instance_type it on i.instance_type_id = it.id
+       join name n on i.name_id = n.id
+       left outer join orth_or_alt_of(n.id) base_id on true
+       left outer join nom_group(coalesce(base_id, n.id)) ng on true
+       join name_status ns on n.name_status_id = ns.id
+       left outer join instance cites on i.cites_id = cites.id
+       left outer join reference r on cites.reference_id = r.id
+where i.cited_by_id = instanceid
+order by (it.sort_order < 20) desc,
+         it.nomenclatural desc,
+         it.taxonomic desc,
+         group_name,
+         group_head desc,
+         n.id = base_id desc,
+         r.year,
+         n.sort_name,
+         it.pro_parte,
+         it.misapplied desc, it.doubtful, cites.page, cites.id;
+$$;
+
+-- apni ordered synonymy as a text output
+
+drop function if exists apni_ordered_synonymy_text(bigint);
+create function apni_ordered_synonymy_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' ||
+                  syn.instance_type ||
+                  ': ' ||
+                  syn.full_name ||
+                  (case
+                     when syn.name_status = 'legitimate' then ''
+                     else ' ' || syn.name_status end) ||
+                  (case
+                     when syn.misapplied then syn.citation
+                     else '' end), E'\n')
+from apni_ordered_synonymy(instanceid) syn;
+$$;
+
+-- if this is a relationship instance what are we a synonym of
+
+drop function if exists apni_synonym(bigint);
+create function apni_synonym(instanceid bigint)
+  returns TABLE(instance_id    bigint,
+                instance_type  text,
+                name_id        bigint,
+                full_name      text,
+                full_name_html text,
+                name_status    text,
+                citation       text,
+                citation_html  text,
+                year           int,
+                page           text,
+                misapplied     boolean,
+                sort_name      text)
+language sql
+as $$
+select i.id,
+       it.of_label as instance_type,
+       n.id        as name_id,
+       n.full_name,
+       n.full_name_html,
+       ns.name,
+       r.citation,
+       r.citation_html,
+       r.year,
+       i.page,
+       it.misapplied,
+       n.sort_name
+from instance i
+       join instance_type it on i.instance_type_id = it.id
+       join instance cites on i.cited_by_id = cites.id
+       join name n on cites.name_id = n.id
+       join name_status ns on n.name_status_id = ns.id
+       join reference r on i.reference_id = r.id
+where i.id = instanceid
+  and it.relationship;
+$$;
+
+-- if this is a relationship instance what are we a synonym of as text
+
+drop function if exists apni_synonym_text(bigint);
+create function apni_synonym_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' ||
+                  syn.instance_type ||
+                  ': ' ||
+                  syn.full_name ||
+                  (case
+                     when syn.name_status = 'legitimate' then ''
+                     else ' ' || syn.name_status end) ||
+                  (case
+                     when syn.misapplied
+                             then 'by ' || syn.citation
+                     else '' end), E'\n')
+from apni_synonym(instanceid) syn;
+$$;
+
+-- apni ordered references for a name
+
+drop function if exists apni_ordered_refrences(bigint);
+create function apni_ordered_refrences(nameid bigint)
+  returns TABLE(instance_id   bigint,
+                instance_type text,
+                citation      text,
+                citation_html text,
+                year          int,
+                pages         text,
+                page          text)
+language sql
+as $$
+select i.id, it.name, r.citation, r.citation_html, r.year, r.pages, coalesce(i.page, citedby.page, '-')
+from instance i
+       join reference r on i.reference_id = r.id
+       join instance_type it on i.instance_type_id = it.id
+       left outer join instance citedby on i.cited_by_id = citedby.id
+where i.name_id = nameid
+group by r.id, i.id, it.id, citedby.id
+order by r.year, it.protologue, it.primary_instance, r.citation, r.pages, i.page, r.id;
+$$;
+
+-- get the synonyms of an instance as html to store in the tree in apni synonymy order
+
+drop function if exists synonym_as_html(bigint);
 create function synonym_as_html(instanceid bigint)
   returns TABLE(html text)
 language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || synonym.full_name_html || ' <type>' || it.name || '</type></nom>'
+                 THEN '<nom>' || full_name_html || ' <type>' || it.name || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || synonym.full_name_html || ' <type>' || it.name || '</type></tax>'
+                 THEN '<tax>' || full_name_html || ' <type>' || it.name || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || synonym.full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
-                      cites_ref.citation_html
+                 THEN '<mis>' || full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
+                      citation_html
                         ||
                       '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || synonym.full_name_html || ' <type>' || it.name || '</type></syn>'
+                 THEN '<syn>' || full_name_html || ' <type>' || it.name || '</type></syn>'
          ELSE ''
            END
-FROM Instance i,
-     Instance syn_inst
-       JOIN instance_type it ON syn_inst.instance_type_id = it.id
-       JOIN instance cites_inst ON syn_inst.cites_id = cites_inst.id
-       JOIN reference cites_ref ON cites_inst.reference_id = cites_ref.id
-    ,
-     NAME synonym
-WHERE syn_inst.cited_by_id = i.id
-  AND i.id = instanceid
-  AND synonym.id = syn_inst.name_id
-ORDER BY it.nomenclatural DESC, it.taxonomic DESC, it.misapplied DESC, synonym.simple_name, cites_ref.year ASC,
-         cites_inst.id ASC, synonym.id ASC;
+FROM apni_ordered_synonymy(instanceid)
+       join instance_type it on instance_type_id = it.id
 $$;
 
-DROP FUNCTION IF EXISTS synonyms_as_html( BIGINT );
-CREATE FUNCTION synonyms_as_html(instance_id BIGINT)
-  RETURNS TEXT
-LANGUAGE SQL
-AS $$
-SELECT '<synonyms>' || string_agg(html, '') || '</synonyms>'
-FROM synonym_as_html(instance_id) AS html;
-$$;
-
+-- build JSONB representation of synonyms inside a shard
 DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)
   RETURNS JSONB
@@ -1549,7 +1735,6 @@ WHERE i.id = instance_id
   AND syn_inst.cited_by_id = i.id
   AND synonym.id = syn_inst.name_id;
 $$;
-
 -- other-setup.sql
 --other setup
 ALTER TABLE instance
@@ -2195,37 +2380,6 @@ INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional,
 INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional, description_html, rdf_id) VALUES (nextval('nsl_global_seq'), 1, 'Unknown', null, true, '(description of <b>Unknown</b>)', 'unknown');
 UPDATE public.ref_type SET parent_id = id WHERE name = 'Unknown'; --self parent
 
-
--- populate-shardconfig.sql
--- default APNI values for shard config - please change for new shards
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'config rules', 'All lower case names, space separated, follow the pattern hierachy');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name space', 'APNI');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name tree label', 'APNI');
-INSERT INTO public.shard_config (id, name, value, deprecated) VALUES (nextval('hibernate_sequence'), 'classification tree label', 'APC', true);
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'APNI description', 'The Australian Plant Name Index (APNI) is a tool for the botanical community that deals with plant names and their usage in the scientific literature, whether as a current name or synonym. APNI does not recommend any particular taxonomy or nomenclature. For a listing of currently accepted scientific names for the Australian vascular flora, please use the Australian Plant Census (APC) link above.');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'APC description', 'The Australian Plant Census (APC) is a list of the accepted scientific names for the Australian vascular flora, ferns, gymnosperms, hornworts and liverworts, both native and introduced, and includes synonyms and misapplications for these names. The APC covers all published scientific plant names used in an Australian context in the taxonomic literature, but excludes taxa known only from cultivation in Australia. The taxonomy and nomenclature adopted for the APC are endorsed by the Council of Heads of Australasian Herbaria (CHAH).');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'menu label', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'banner text', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree banner text', 'Australian Plant Census');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name label', 'APNI');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree description html', '<p>The Australian Plant Census (APC) is a nationally-accepted taxonomy for the Australian flora. APC covers all published scientific plant names used in an Australian context in the taxonomic literature, but excludes taxa known only from cultivation in Australia. The taxonomy and nomenclature adopted for the APC are endorsed by the Council of Heads of Australasian Herbaria (CHAH). </p><p>Information available from APC includes:</p><ul class="discs"> <li>Accepted scientific name and author abbreviation(s);</li> <li>Reference to the taxonomic and nomenclatural concept adopted for APC;</li>  <li>Synonym(s) and misapplications;</li> <li>State distribution;</li><li>Relevant comments and notes</li></ul><p>APC is currently maintained within the Centre for Australian National Biodiversity Research with staff, resources and financial support from the Australian National Herbarium, Australian National Botanic Gardens and the Australian Biological Resources Study. The CANBR, ANBG and ABRS collaborate to further the updating and delivery of APNI and APC.</p>');
-INSERT INTO public.shard_config (id, name, value, deprecated) VALUES (nextval('hibernate_sequence'), 'tree label', 'APC', true);
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree label text', 'Australian Plant Census');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'page title', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree search help text html', 'The Australian Plant Census (APC) provides a listing of currently accepted names for the Australian native and introduced flora, including angiosperms, ferns, gymnosperms, hornworts and liverworts. APC does not de full details of the usage of these names in the taxonomic literature.   For comprehensive bibliographic information, see the <a href="/names">Australian Plant Name Index database (APNI)</a>.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'services path name element', 'apni');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name search help text html', '<p>The Australian Plant Name Index (APNI) is a resource for the botanical community that deals with vascular plant names and their usage in the scientific literature, whether as a current name or synonym.  Names of cultivars derived from the Australian flora are also included.</p><p>APNI does not recommend any particular taxonomy or nomenclature.</p><p>For a listing of currently accepted scientific names for the Australian vascular flora, use the <a href="/taxonomy/accepted">Australian Plant Census (APC)</a>.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'services path tree element', 'apc');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name link title', 'Vascular Plant Names in the Australian Plant Names Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'menu link title', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name label text', 'Australian Plant Name Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name banner text', 'Australian Plant Name Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree link title', 'Australian Plant Census Taxonomy');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name description html', '<p>The Australian Plant Name Index (APNI) is a national resource providing information on the names of native and naturalised Australian plants and the usage of these names in the scientific literature, whether as a current name or synonym. APNI includes data for angiosperms, ferns, gymnosperms, hornworts, and liverworts. It also includes names for cultivars derived from the Australian flora. APNI does not recommend any particular taxonomy or nomenclature. For a listing of currently accepted scientific names for the Australian vascular flora, see the Australian Plant Census (APC). </p> Information available from APNI includes:<ul class="discs"><li>Scientific plant names;<li>Author details;</li><li>Original publication details (protologue) with links to the publication when available;</li><li>Subsequent usage of the name in the scientific literature (in an Australian context);</li><li>Typification details;</li><li>Icons indicating which, if any, is the currently accepted concept in the Australian Plant Census (APC);</li><li>State distribution (from APC); </li><li>Relevant comments and notes; and </li><li>Links to other information where available. </li></ul><p>APNI is currently maintained within the Centre for Australian National Biodiversity Research with staff, resources and financial support from the Australian National Herbarium, Australian National Botanic Gardens and the Australian Biological Resources Study. The CANBR, ANBG and ABRS collaborate to further the updating and delivery of APNI and APC.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'banner image', 'apni-banner.png');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'card image', 'apni-vert-200.png');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'description html', '<p>This section of the National Species List infrastructure delivers names and taxonomies for flowering plants, ferns, gymnosperms, hornworts, and liverworts.The data comprise names, bibliographic information, and taxonomic concepts for plants that are either native to or naturalised in Australia.</p><p>The Australian Plant Name Index (APNI) provides names and bibliographic information.</p><p>The Australian Plant Census (APC) provides a nationally-accepted taxonomy.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'classification tree key', 'APC');
 
 -- populate-top-level-names.sql
 INSERT INTO public.author (id, lock_version, abbrev, created_at, created_by, date_range, duplicate_of_id, full_name, ipni_id,
