@@ -74,7 +74,11 @@ select i.id,
        it.misapplied,
        ng.nom_name      as group_name,
        ng.nom_id = n.id as group_head,
-       ng.nom_id        as group_id
+       ng.nom_id        as group_id,
+       case
+         when it.taxonomic then r.year
+         else 0
+           end          as tax_year
 from instance i
        join instance_type it on i.instance_type_id = it.id
        join name n on i.name_id = n.id
@@ -87,6 +91,7 @@ where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.nomenclatural desc,
          it.taxonomic desc,
+         tax_year,
          group_name,
          group_head desc,
          n.id = base_id desc,
