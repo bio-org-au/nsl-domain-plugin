@@ -1525,7 +1525,8 @@ create function apni_ordered_synonymy(instanceid bigint)
                 misapplied       boolean,
                 group_name       text,
                 group_head       boolean,
-                group_id         bigint)
+                group_id         bigint,
+                tax_year int )
 language sql
 as $$
 select i.id,
