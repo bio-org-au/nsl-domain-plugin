@@ -123,12 +123,31 @@ select string_agg('  ' ||
 from apni_ordered_synonymy(instanceid) syn;
 $$;
 
+-- apni ordered synonymy as a jsonb output
+drop function if exists apni_ordered_synonymy_jsonb(bigint);
+create function apni_ordered_synonymy_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'instance_type', syn.instance_type,
+           'full_name_html', syn.full_name_html,
+           'name_status', syn.name_status,
+           'misapplied', syn.misapplied,
+           'citation_html', syn.citation_html
+             )
+           )
+from apni_ordered_synonymy(instanceid) syn;
+$$;
+
 -- if this is a relationship instance what are we a synonym of
 
 drop function if exists apni_synonym(bigint);
 create function apni_synonym(instanceid bigint)
   returns TABLE(instance_id    bigint,
                 instance_type  text,
+                instance_type_id bigint,
                 name_id        bigint,
                 full_name      text,
                 full_name_html text,
@@ -143,6 +162,7 @@ language sql
 as $$
 select i.id,
        it.of_label as instance_type,
+       it.id       as instance_type_id,
        n.id        as name_id,
        n.full_name,
        n.full_name_html,
@@ -164,7 +184,6 @@ where i.id = instanceid
 $$;
 
 -- if this is a relationship instance what are we a synonym of as text
-
 drop function if exists apni_synonym_text(bigint);
 create function apni_synonym_text(instanceid bigint)
   returns text
@@ -185,6 +204,23 @@ select string_agg('  ' ||
 from apni_synonym(instanceid) syn;
 $$;
 
+-- if this is a relationship instance what are we a synonym of as jsonb
+drop function if exists apni_synonym_jsonb(bigint);
+create function apni_synonym_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'instance_type', syn.instance_type,
+           'full_name_html', syn.full_name_html,
+           'name_status', syn.name_status,
+           'misapplied', syn.misapplied,
+           'citation_html', syn.citation_html
+             )
+           )
+from apni_synonym(instanceid) syn;
+$$;
 
 -- apni ordered references for a name
 
@@ -300,6 +336,19 @@ select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
 from type_notes(instanceid) as nt
 $$;
 
+drop function if exists type_notes_jsonb(bigint);
+create function type_notes_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'note_key', nt.note_key,
+           'note_value', nt.note
+             )
+           )
+from type_notes(instanceid) as nt
+$$;
 
 drop function if exists non_type_notes(bigint);
 create function non_type_notes(instanceid bigint)
@@ -323,8 +372,21 @@ select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
 from non_type_notes(instanceid) as nt
 $$;
 
--- profile stuff
+drop function if exists non_type_notes_jsonb(bigint);
+create function non_type_notes_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'note_key', nt.note_key,
+           'note_value', nt.note
+             )
+           )
+from non_type_notes(instanceid) as nt
+$$;
 
+-- profile stuff
 drop function if exists latest_accepted_profile(bigint);
 create function latest_accepted_profile(instanceid bigint)
   returns table(comment_key text, comment_value text, dist_key text, dist_value text)
@@ -343,6 +405,19 @@ order by tv.id desc
 limit 1
 $$;
 
+drop function if exists latest_accepted_profile_jsonb(bigint);
+create function latest_accepted_profile_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_build_object(
+         'comment_key', comment_key,
+         'comment_value', comment_value,
+         'dist_key', dist_key,
+         'dist_value', dist_value
+           )
+from latest_accepted_profile(instanceid)
+$$;
 
 drop function if exists latest_accepted_profile_text(bigint);
 create function latest_accepted_profile_text(instanceid bigint)
@@ -365,7 +440,6 @@ from latest_accepted_profile(instanceid)
 $$;
 
 -- apni details as text output
-
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
   returns text
@@ -380,5 +454,24 @@ select string_agg(' ' ||
                   coalesce(non_type_notes_text(refs.instance_id), '') ||
                   coalesce(latest_accepted_profile_text(refs.instance_id), ''),
                   E'\n')
+from apni_ordered_refrences(nameid) refs
+$$;
+
+-- apni details as jsonb output
+drop function if exists apni_detail_jsonb(bigint);
+create function apni_detail_jsonb(nameid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'ref_citation_html', refs.citation_html,
+           'page', refs.page,
+           'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
+           'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
+           'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
+           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb)
+             )
+           )
 from apni_ordered_refrences(nameid) refs
 $$;

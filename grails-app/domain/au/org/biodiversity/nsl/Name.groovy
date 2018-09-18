@@ -15,6 +15,8 @@
 */
 package au.org.biodiversity.nsl
 
+import net.kaleidos.hibernate.usertype.JsonbMapType
+
 import java.sql.Timestamp
 
 class Name {
@@ -62,6 +64,8 @@ class Name {
     String createdBy
     Timestamp createdAt
 
+    Map apniJson
+
     static hasMany = [
             instances     : Instance,
             comments      : Comment,
@@ -106,6 +110,8 @@ class Name {
 
         updatedAt sqlType: 'timestamp with time zone'
         createdAt sqlType: 'timestamp with time zone'
+
+        apniJson type: JsonbMapType
     }
 
     static constraints = {
@@ -132,6 +138,7 @@ class Name {
         secondParent nullable: true
         family nullable: true
         verbatimRank nullable: true, maxSize: 50
+        apniJson nullable: true
     }
 
     @Override
