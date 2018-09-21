@@ -131,6 +131,7 @@ language sql
 as $$
 select jsonb_agg(
          jsonb_build_object(
+           'instance_id', syn.instance_id,
            'instance_type', syn.instance_type,
            'full_name_html', syn.full_name_html,
            'name_status', syn.name_status,
@@ -466,6 +467,9 @@ as $$
 select jsonb_agg(
          jsonb_build_object(
            'ref_citation_html', refs.citation_html,
+           'ref_citation', refs.citation,
+           'instance_id', refs.instance_id,
+           'instance_type', refs.instance_type,
            'page', refs.page,
            'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
            'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
