@@ -6,6 +6,7 @@ class Resource {
 
     String path
     Site site
+    ResourceType resourceType
 
     String updatedBy
     Timestamp updatedAt

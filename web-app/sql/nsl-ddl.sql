@@ -144,7 +144,13 @@
         drop constraint if exists FK_dm9y4p9xpsc8m7vljbohubl7x;
 
     alter table if exists resource 
+        drop constraint if exists FK_i2tgkebwedao7dlbjcrnvvtrv;
+
+    alter table if exists resource 
         drop constraint if exists FK_l76e0lo0edcngyyqwkmkgywj9;
+
+    alter table if exists resource_type 
+        drop constraint if exists FK_6nxjoae1hvplngbvpo0k57jjt;
 
     alter table if exists tree 
         drop constraint if exists FK_svg2ee45qvpomoer2otdc5oyc;
@@ -196,6 +202,8 @@
 
     drop table if exists language cascade;
 
+    drop table if exists media cascade;
+
     drop table if exists name cascade;
 
     drop table if exists name_category cascade;
@@ -223,6 +231,8 @@
     drop table if exists reference cascade;
 
     drop table if exists resource cascade;
+
+    drop table if exists resource_type cascade;
 
     drop table if exists shard_config cascade;
 
@@ -430,6 +440,16 @@
         iso6391code varchar(2),
         iso6393code varchar(3) not null,
         name varchar(50) not null,
+        primary key (id)
+    );
+
+    create table media (
+        id int8 default nextval('hibernate_sequence') not null,
+        version int8 not null,
+        data bytea not null,
+        description text not null,
+        file_name text not null,
+        mime_type text not null,
         primary key (id)
     );
 
@@ -649,9 +669,23 @@
         created_at timestamp with time zone not null,
         created_by varchar(50) not null,
         path varchar(2400) not null,
+        resource_type_id int8 not null,
         site_id int8 not null,
         updated_at timestamp with time zone not null,
         updated_by varchar(50) not null,
+        primary key (id)
+    );
+
+    create table resource_type (
+        id int8 default nextval('nsl_global_seq') not null,
+        lock_version int8 default 0 not null,
+        css_icon text,
+        deprecated boolean default false not null,
+        description text not null,
+        display boolean default false not null,
+        media_icon_id int8,
+        name text not null,
+        rdf_id varchar(50),
         primary key (id)
     );
 
@@ -1167,9 +1201,19 @@
         references ref_type;
 
     alter table if exists resource 
+        add constraint FK_i2tgkebwedao7dlbjcrnvvtrv 
+        foreign key (resource_type_id) 
+        references resource_type;
+
+    alter table if exists resource 
         add constraint FK_l76e0lo0edcngyyqwkmkgywj9 
         foreign key (site_id) 
         references site;
+
+    alter table if exists resource_type 
+        add constraint FK_6nxjoae1hvplngbvpo0k57jjt 
+        foreign key (media_icon_id) 
+        references media;
 
     alter table if exists tree 
         add constraint FK_svg2ee45qvpomoer2otdc5oyc 
@@ -1910,6 +1954,39 @@ select '  ' ||
 from latest_accepted_profile(instanceid)
 $$;
 
+-- resources
+
+drop function if exists instance_resources(bigint);
+create function instance_resources(instanceid bigint)
+  returns table(name text, description text, url text, css_icon text, media_icon text)
+language sql
+as $$
+select rd.name, rd.description, s.url || '/' || r.path, rd.css_icon, 'media/' || m.id
+from instance_resources ir
+       join resource r on ir.resource_id = r.id
+       join site s on r.site_id = s.id
+       join resource_type rd on r.resource_type_id = rd.id
+      left outer join media m on m.id = rd.media_icon_id
+    where ir.instance_id = instanceid
+$$;
+
+drop function if exists instance_resources_jsonb(bigint);
+create function instance_resources_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'type', ir.name,
+           'description', ir.description,
+           'url', ir.url,
+           'css_icon', ir.css_icon,
+           'media_icon', ir.media_icon
+         )
+       )
+from instance_resources(instanceid) ir
+$$;
+
 -- apni details as text output
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
@@ -1944,12 +2021,12 @@ select jsonb_agg(
            'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
            'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
            'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
-           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb)
-             )
-           )
+           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb),
+           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb)
+         )
+       )
 from apni_ordered_refrences(nameid) refs
 $$;
-
 -- other-setup.sql
 --other setup
 ALTER TABLE instance

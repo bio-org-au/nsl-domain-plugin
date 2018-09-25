@@ -1,3 +1,49 @@
+--drop resource and media tables and rebuild
+alter table resource drop column if exists resource_type_id;
+alter table name drop column if exists apni_json;
+drop table if exists resource_type;
+drop table if exists media;
+
+-- delete existing resources as they'll be re-created correctly where needed
+delete from instance_resources;
+delete from resource;
+
+-- create new resource description and media tables
+create table media (
+  id int8 default nextval('hibernate_sequence') not null,
+  version int8 not null,
+  data bytea not null,
+  description text not null,
+  file_name text not null,
+  mime_type text not null,
+  primary key (id)
+);
+
+create table resource_type (
+  id int8 default nextval('nsl_global_seq') not null,
+  lock_version int8 default 0 not null,
+  css_icon text,
+  deprecated boolean default false not null,
+  description text not null,
+  display boolean default true not null,
+  media_icon_id int8,
+  name text not null,
+  rdf_id varchar(50),
+  primary key (id)
+);
+
+alter table resource add column resource_type_id int8 not null; -- there shouldn't be any yet
+
+alter table if exists resource
+  add constraint FK_i2tgkebwedao7dlbjcrnvvtrv
+  foreign key (resource_type_id)
+  references resource_type;
+
+alter table if exists resource_type
+  add constraint FK_6nxjoae1hvplngbvpo0k57jjt
+  foreign key (media_icon_id)
+  references media;
+
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
 -- find the group name for a name based on the basionym
@@ -440,6 +486,39 @@ select '  ' ||
 from latest_accepted_profile(instanceid)
 $$;
 
+-- resources
+
+drop function if exists instance_resources(bigint);
+create function instance_resources(instanceid bigint)
+  returns table(name text, description text, url text, css_icon text, media_icon text)
+language sql
+as $$
+select rd.name, rd.description, s.url || '/' || r.path, rd.css_icon, 'media/' || m.id
+from instance_resources ir
+       join resource r on ir.resource_id = r.id
+       join site s on r.site_id = s.id
+       join resource_type rd on r.resource_type_id = rd.id
+      left outer join media m on m.id = rd.media_icon_id
+    where ir.instance_id = instanceid
+$$;
+
+drop function if exists instance_resources_jsonb(bigint);
+create function instance_resources_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'type', ir.name,
+           'description', ir.description,
+           'url', ir.url,
+           'css_icon', ir.css_icon,
+           'media_icon', ir.media_icon
+         )
+       )
+from instance_resources(instanceid) ir
+$$;
+
 -- apni details as text output
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
@@ -474,9 +553,10 @@ select jsonb_agg(
            'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
            'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
            'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
-           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb)
-             )
-           )
+           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb),
+           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb)
+         )
+       )
 from apni_ordered_refrences(nameid) refs
 $$;
 
@@ -539,11 +619,9 @@ where tve.tree_element_id = te.id
 drop function if exists synonym_current_as_html(bigint);
 drop function if exists current_synonyms_as_html(bigint);
 
--- populate apni_json field
-update name n set apni_json = jsonb_build_object(
-                                'detail', apni_detail_jsonb(n.id)
-    )
-where exists (select 1 from instance i where i.name_id = n.id);
+-- clean up bhl_urls that are blank
+
+update instance set bhl_url = null where bhl_url = '';
 
 -- version
 UPDATE db_version

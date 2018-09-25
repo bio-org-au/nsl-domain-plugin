@@ -440,6 +440,39 @@ select '  ' ||
 from latest_accepted_profile(instanceid)
 $$;
 
+-- resources
+
+drop function if exists instance_resources(bigint);
+create function instance_resources(instanceid bigint)
+  returns table(name text, description text, url text, css_icon text, media_icon text)
+language sql
+as $$
+select rd.name, rd.description, s.url || '/' || r.path, rd.css_icon, 'media/' || m.id
+from instance_resources ir
+       join resource r on ir.resource_id = r.id
+       join site s on r.site_id = s.id
+       join resource_type rd on r.resource_type_id = rd.id
+      left outer join media m on m.id = rd.media_icon_id
+    where ir.instance_id = instanceid
+$$;
+
+drop function if exists instance_resources_jsonb(bigint);
+create function instance_resources_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'type', ir.name,
+           'description', ir.description,
+           'url', ir.url,
+           'css_icon', ir.css_icon,
+           'media_icon', ir.media_icon
+         )
+       )
+from instance_resources(instanceid) ir
+$$;
+
 -- apni details as text output
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
@@ -474,8 +507,9 @@ select jsonb_agg(
            'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
            'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
            'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
-           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb)
-             )
-           )
+           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb),
+           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb)
+         )
+       )
 from apni_ordered_refrences(nameid) refs
 $$;
