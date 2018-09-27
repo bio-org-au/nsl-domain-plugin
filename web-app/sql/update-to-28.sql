@@ -44,6 +44,22 @@ alter table if exists resource_type
   foreign key (media_icon_id)
   references media;
 
+-- add uri columns to author, instance,name and reference nullable for now.
+
+alter table author add column uri text;
+alter table instance add column uri text;
+alter table name add column uri text;
+alter table reference add column uri text;
+
+alter table if exists author
+  add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
+alter table if exists instance
+  add constraint UK_bl9pesvdo9b3mp2qdna1koqc7  unique (uri);
+alter table if exists name
+  add constraint UK_66rbixlxv32riosi9ob62m8h5  unique (uri);
+alter table if exists reference
+  add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
+
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
 -- find the group name for a name based on the basionym

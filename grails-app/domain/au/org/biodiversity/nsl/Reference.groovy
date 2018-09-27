@@ -19,6 +19,7 @@ import java.sql.Timestamp
 
 class Reference {
 
+    String uri
     String doi
     String title
     String displayTitle
@@ -81,6 +82,7 @@ class Reference {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
 
         sourceId index: 'Ref_Source_Index'
@@ -98,6 +100,7 @@ class Reference {
     }
 
     static constraints = {
+        uri nullable: true, unique: true
         doi nullable: true, unique: true
         title maxSize: 2000
         displayTitle maxSize: 2000

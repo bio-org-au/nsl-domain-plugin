@@ -21,6 +21,7 @@ import java.sql.Timestamp
 
 class Name {
 
+    String uri
     String nameElement
     String statusSummary
     String verbatimRank
@@ -83,6 +84,7 @@ class Name {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
         orthVar defaultvalue: "false"
 
@@ -115,6 +117,7 @@ class Name {
     }
 
     static constraints = {
+        uri nullable: true, unique: true
         nameElement nullable: true
         statusSummary nullable: true, maxSize: 50
         updatedBy maxSize: 50

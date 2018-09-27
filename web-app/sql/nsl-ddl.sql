@@ -270,6 +270,7 @@
         source_system varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(255) not null,
+        uri text,
         valid_record boolean default false not null,
         primary key (id)
     );
@@ -368,6 +369,7 @@
         source_system varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(1000) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_name_string varchar(255),
         primary key (id)
@@ -487,6 +489,7 @@
         status_summary varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(50) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_rank varchar(50),
         primary key (id)
@@ -654,6 +657,7 @@
         tl2 varchar(30),
         updated_at timestamp with time zone not null,
         updated_by varchar(1000) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_author varchar(1000),
         verbatim_citation varchar(2000),
@@ -781,6 +785,9 @@
     );
 
     alter table if exists author 
+        add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
+
+    alter table if exists author 
         add constraint UK_9kovg6nyb11658j2tv2yv4bsi  unique (abbrev);
 
     create index Author_Abbrev_Index on author (abbrev);
@@ -813,6 +820,9 @@
         add constraint unique_from_id  unique (to_id, from_id);
 
     create index id_mapper_from_Index on id_mapper (from_id, namespace_id, system);
+
+    alter table if exists instance 
+        add constraint UK_bl9pesvdo9b3mp2qdna1koqc7  unique (uri);
 
     create index Instance_CitedBy_Index on instance (cited_by_id);
 
@@ -856,6 +866,9 @@
 
     alter table if exists language 
         add constraint UK_g8hr207ijpxlwu10pewyo65gv  unique (name);
+
+    alter table if exists name 
+        add constraint UK_66rbixlxv32riosi9ob62m8h5  unique (uri);
 
     create index Name_author_Index on name (author_id);
 
@@ -912,6 +925,9 @@
 
     alter table if exists ref_type 
         add constraint UK_4fp66uflo7rgx59167ajs0ujv  unique (name);
+
+    alter table if exists reference 
+        add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
     alter table if exists reference 
         add constraint UK_kqwpm0crhcq4n9t9uiyfxo2df  unique (doi);

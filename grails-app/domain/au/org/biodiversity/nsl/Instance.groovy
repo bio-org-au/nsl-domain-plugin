@@ -19,6 +19,7 @@ import java.sql.Timestamp
 
 class Instance {
 
+    String uri
     String verbatimNameString
     String page
     String pageQualifier
@@ -66,6 +67,7 @@ class Instance {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
         draft defaultvalue: "false"
 
@@ -86,6 +88,7 @@ class Instance {
     }
 
     static constraints = {
+        uri nullable: true, unique: true
         verbatimNameString nullable: true
         page nullable: true
         pageQualifier nullable: true
