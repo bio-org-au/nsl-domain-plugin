@@ -485,6 +485,39 @@ select jsonb_agg(
 from instance_resources(instanceid) ir
 $$;
 
+-- latest tree version this instance has been on
+drop function if exists instance_on_accepted_tree(bigint);
+create function instance_on_accepted_tree(instanceId bigint)
+  returns table(current boolean, element_link text, tree_name text)
+language sql
+as $$
+select t.current_tree_version_id = tv.id as current, tve.element_link, t.name
+from tree_element te
+       join tree_version_element tve on te.id = tve.tree_element_id
+       join tree_version tv on tve.tree_version_id = tv.id
+       join tree t on tv.tree_id = t.id and t.accepted_tree
+where te.instance_id = instanceId
+  and tv.published
+order by tve.tree_version_id desc
+limit 1;
+$$;
+
+drop function if exists instance_on_accepted_tree_jsonb(bigint);
+create function instance_on_accepted_tree_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+             'current', tve.current,
+             'element_link', tve.element_link,
+             'tree_name', tve.tree_name
+             )
+           )
+from instance_on_accepted_tree(instanceid) tve
+$$;
+
+
 -- apni details as text output
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
@@ -520,7 +553,8 @@ select jsonb_agg(
            'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
            'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
            'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb),
-           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb)
+           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb),
+           'tree', coalesce(instance_on_accepted_tree_jsonb(refs.instance_id), '{}' :: jsonb)
          )
        )
 from apni_ordered_refrences(nameid) refs
