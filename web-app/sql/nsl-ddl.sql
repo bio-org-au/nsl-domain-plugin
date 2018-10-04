@@ -785,10 +785,10 @@
     );
 
     alter table if exists author 
-        add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
+        add constraint UK_9kovg6nyb11658j2tv2yv4bsi  unique (abbrev);
 
     alter table if exists author 
-        add constraint UK_9kovg6nyb11658j2tv2yv4bsi  unique (abbrev);
+        add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
 
     create index Author_Abbrev_Index on author (abbrev);
 
@@ -927,10 +927,10 @@
         add constraint UK_4fp66uflo7rgx59167ajs0ujv  unique (name);
 
     alter table if exists reference 
-        add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
+        add constraint UK_kqwpm0crhcq4n9t9uiyfxo2df  unique (doi);
 
     alter table if exists reference 
-        add constraint UK_kqwpm0crhcq4n9t9uiyfxo2df  unique (doi);
+        add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
     create index Reference_Author_Index on reference (author_id);
 
@@ -1530,21 +1530,37 @@ $body$;
 -- functions.sql
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
--- find the group name for a name based on the basionym
-drop function if exists nom_group(bigint);
-create function nom_group(nameid bigint)
-  returns table(nom_name text, nom_id bigint)
+
+-- find basionym
+drop function if exists basionym(bigint);
+create function basionym(nameid bigint)
+  returns bigint
 language sql
 as $$
-select coalesce(bas_name.sort_name, primary_name.sort_name), coalesce(bas_name.id, primary_inst.name_id)
+select coalesce(bas_name.id, primary_inst.name_id)
 from instance primary_inst
        left join instance bas_inst
        join name bas_name on bas_inst.name_id = bas_name.id
        join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name = 'basionym'
-         on bas_inst.cited_by_id = primary_inst.id
+       join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
        join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
-       join name primary_name on primary_name.id = nameid
 where primary_inst.name_id = nameid
+limit 1;
+$$;
+
+-- Find earliest local instance for a name.
+drop function if exists first_ref(bigint);
+create function first_ref(nameid bigint)
+  returns table(group_id bigint, group_name text, protonym_id bigint, group_year integer)
+language sql
+as $$
+select n.id group_id, n.sort_name group_name, i.id protonym_id, min(r.year)
+from name n
+       join name_type nt on n.name_type_id = nt.id
+       join instance i
+       join reference r on i.reference_id = r.id on case when nt.autonym then n.parent_id else n.id end = i.name_id
+where n.id = nameid
+group by n.id, sort_name, i.id
 limit 1;
 $$;
 
@@ -1569,7 +1585,6 @@ $$;
 -- get the synonyms of a name in flora order for apni
 
 drop function if exists apni_ordered_synonymy(bigint);
-
 create function apni_ordered_synonymy(instanceid bigint)
   returns TABLE(instance_id      bigint,
                 instance_type    text,
@@ -1587,34 +1602,32 @@ create function apni_ordered_synonymy(instanceid bigint)
                 group_name       text,
                 group_head       boolean,
                 group_id         bigint,
-                tax_year int )
+                group_year       integer,
+                ref_id           bigint)
 language sql
 as $$
 select i.id,
-       it.has_label     as instance_type,
-       it.id            as instance_type_id,
-       n.id             as name_id,
+       it.has_label                    as instance_type,
+       it.id                           as instance_type_id,
+       n.id                            as name_id,
        n.full_name,
        n.full_name_html,
-       ns.name          as name_status,
+       ns.name                         as name_status,
        r.citation,
        r.citation_html,
        r.year,
        cites.page,
        n.sort_name,
        it.misapplied,
-       ng.nom_name      as group_name,
-       ng.nom_id = n.id as group_head,
-       ng.nom_id        as group_id,
-       case
-         when it.taxonomic then r.year
-         else 0
-           end          as tax_year
+       ng.group_name                   as group_name,
+       ng.group_id = n.id              as group_head,
+       coalesce(ng.group_id, n.id)     as group_id,
+       coalesce(ng.group_year, r.year) as group_year,
+       r.id
 from instance i
        join instance_type it on i.instance_type_id = it.id
        join name n on i.name_id = n.id
-       left outer join orth_or_alt_of(n.id) base_id on true
-       left outer join nom_group(coalesce(base_id, n.id)) ng on true
+       left outer join first_ref(basionym(coalesce(orth_or_alt_of(n.id), n.id))) ng on true
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
@@ -1622,10 +1635,9 @@ where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.nomenclatural desc,
          it.taxonomic desc,
-         tax_year,
+         group_year, group_id, group_head desc,
          group_name,
-         group_head desc,
-         n.id = base_id desc,
+         n.id = ng.group_id desc,
          r.year,
          n.sort_name,
          it.pro_parte,
