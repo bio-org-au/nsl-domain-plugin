@@ -66,8 +66,10 @@ alter table if exists reference
 
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
--- find the group name for a name based on the basionym
+
+-- drop functions no longer used if they exist.
 drop function if exists nom_group(bigint);
+drop function if exists apni_ordered_refrences(bigint);
 
 -- find basionym
 drop function if exists basionym(bigint);
@@ -89,16 +91,16 @@ $$;
 -- Find earliest local instance for a name.
 drop function if exists first_ref(bigint);
 create function first_ref(nameid bigint)
-  returns table(group_id bigint, group_name text, protonym_id bigint, group_year integer)
+  returns table(group_id bigint, group_name text, group_year integer)
 language sql
 as $$
-select n.id group_id, n.sort_name group_name, i.id protonym_id, min(r.year)
+select n.id group_id, n.sort_name group_name, min(r.year)
 from name n
        join name_type nt on n.name_type_id = nt.id
        join instance i
        join reference r on i.reference_id = r.id on case when nt.autonym then n.parent_id else n.id end = i.name_id
 where n.id = nameid
-group by n.id, sort_name, i.id
+group by n.id, sort_name
 limit 1;
 $$;
 
@@ -125,9 +127,11 @@ $$;
 drop function if exists apni_ordered_synonymy(bigint);
 create function apni_ordered_synonymy(instanceid bigint)
   returns TABLE(instance_id      bigint,
+                instance_uri     text,
                 instance_type    text,
                 instance_type_id bigint,
                 name_id          bigint,
+                name_uri         text,
                 full_name        text,
                 full_name_html   text,
                 name_status      text,
@@ -145,9 +149,11 @@ create function apni_ordered_synonymy(instanceid bigint)
 language sql
 as $$
 select i.id,
+       i.uri,
        it.has_label                    as instance_type,
        it.id                           as instance_type_id,
        n.id                            as name_id,
+       n.uri,
        n.full_name,
        n.full_name_html,
        ns.name                         as name_status,
@@ -165,7 +171,7 @@ select i.id,
 from instance i
        join instance_type it on i.instance_type_id = it.id
        join name n on i.name_id = n.id
-       left outer join first_ref(basionym(coalesce(orth_or_alt_of(n.id), n.id))) ng on true
+       left outer join first_ref(basionym(coalesce(orth_or_alt_of(n.id), n.id))) ng on not it.nomenclatural
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
@@ -212,7 +218,9 @@ as $$
 select jsonb_agg(
          jsonb_build_object(
            'instance_id', syn.instance_id,
+           'instance_uri', syn.instance_uri,
            'instance_type', syn.instance_type,
+           'name_uri', syn.name_uri,
            'full_name_html', syn.full_name_html,
            'name_status', syn.name_status,
            'misapplied', syn.misapplied,
@@ -227,9 +235,11 @@ $$;
 drop function if exists apni_synonym(bigint);
 create function apni_synonym(instanceid bigint)
   returns TABLE(instance_id    bigint,
+                instance_uri   text,
                 instance_type  text,
                 instance_type_id bigint,
                 name_id        bigint,
+                name_uri       text,
                 full_name      text,
                 full_name_html text,
                 name_status    text,
@@ -242,9 +252,11 @@ create function apni_synonym(instanceid bigint)
 language sql
 as $$
 select i.id,
+       i.uri,
        it.of_label as instance_type,
        it.id       as instance_type_id,
        n.id        as name_id,
+       n.uri,
        n.full_name,
        n.full_name_html,
        ns.name,
@@ -293,7 +305,10 @@ language sql
 as $$
 select jsonb_agg(
          jsonb_build_object(
+           'instance_id', syn.instance_id,
+           'instance_uri', syn.instance_uri,
            'instance_type', syn.instance_type,
+           'name_uri', syn.name_uri,
            'full_name_html', syn.full_name_html,
            'name_status', syn.name_status,
            'misapplied', syn.misapplied,
@@ -305,9 +320,10 @@ $$;
 
 -- apni ordered references for a name
 
-drop function if exists apni_ordered_refrences(bigint);
-create function apni_ordered_refrences(nameid bigint)
+drop function if exists apni_ordered_references(bigint);
+create function apni_ordered_references(nameid bigint)
   returns TABLE(instance_id   bigint,
+                instance_uri text,
                 instance_type text,
                 citation      text,
                 citation_html text,
@@ -316,7 +332,7 @@ create function apni_ordered_refrences(nameid bigint)
                 page          text)
 language sql
 as $$
-select i.id, it.name, r.citation, r.citation_html, r.year, r.pages, coalesce(i.page, citedby.page, '-')
+select i.id, i.uri, it.name, r.citation, r.citation_html, r.year, r.pages, coalesce(i.page, citedby.page, '-')
 from instance i
        join reference r on i.reference_id = r.id
        join instance_type it on i.instance_type_id = it.id
@@ -556,10 +572,10 @@ $$;
 -- latest tree version this instance has been on
 drop function if exists instance_on_accepted_tree(bigint);
 create function instance_on_accepted_tree(instanceId bigint)
-  returns table(current boolean, element_link text, tree_name text)
+  returns table(current boolean, excluded boolean, element_link text, tree_name text)
 language sql
 as $$
-select t.current_tree_version_id = tv.id as current, tve.element_link, t.name
+select t.current_tree_version_id = tv.id, te.excluded, tve.element_link, t.name
 from tree_element te
        join tree_version_element tve on te.id = tve.tree_element_id
        join tree_version tv on tve.tree_version_id = tv.id
@@ -577,9 +593,10 @@ language sql
 as $$
 select jsonb_agg(
          jsonb_build_object(
-           'current', tve.current,
-           'element_link', tve.element_link,
-           'tree_name', tve.tree_name
+             'current', tve.current,
+             'excluded', tve.excluded,
+             'element_link', tve.element_link,
+             'tree_name', tve.tree_name
              )
            )
 from instance_on_accepted_tree(instanceid) tve
@@ -600,7 +617,7 @@ select string_agg(' ' ||
                   coalesce(non_type_notes_text(refs.instance_id), '') ||
                   coalesce(latest_accepted_profile_text(refs.instance_id), ''),
                   E'\n')
-from apni_ordered_refrences(nameid) refs
+from apni_ordered_references(nameid) refs
 $$;
 
 -- apni details as jsonb output
@@ -614,6 +631,7 @@ select jsonb_agg(
            'ref_citation_html', refs.citation_html,
            'ref_citation', refs.citation,
            'instance_id', refs.instance_id,
+           'instance_uri', refs.instance_uri,
            'instance_type', refs.instance_type,
            'page', refs.page,
            'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
@@ -624,7 +642,7 @@ select jsonb_agg(
            'tree', coalesce(instance_on_accepted_tree_jsonb(refs.instance_id), '{}' :: jsonb)
          )
        )
-from apni_ordered_refrences(nameid) refs
+from apni_ordered_references(nameid) refs
 $$;
 
 -- Add apni_json field to name
