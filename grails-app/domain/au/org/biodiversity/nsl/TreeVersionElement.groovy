@@ -14,6 +14,7 @@ class TreeVersionElement {
     Integer depth = 0
     String elementLink
     String taxonLink
+    Boolean mergeConflict = false
 
     String updatedBy
     Timestamp updatedAt
@@ -35,6 +36,7 @@ class TreeVersionElement {
         namePath sqlType: 'Text', index: "tree_name_path_index"
         depth defaultValue: 0
         updatedAt sqlType: 'timestamp with time zone'
+        mergeConflict defaultValue: false
     }
 
     static constraints = {

@@ -5,6 +5,7 @@ alter table author drop column if exists uri;
 alter table instance drop column if exists uri;
 alter table name drop column if exists uri;
 alter table reference drop column if exists uri;
+alter table tree_version_element drop column if exists merge_conflict;
 drop table if exists resource_type;
 drop table if exists media;
 
@@ -54,6 +55,7 @@ alter table author add column uri text;
 alter table instance add column uri text;
 alter table name add column uri text;
 alter table reference add column uri text;
+alter table tree_version_element add column merge_conflict boolean default false not null;
 
 alter table if exists author
   add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);

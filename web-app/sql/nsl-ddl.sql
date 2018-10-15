@@ -772,6 +772,7 @@
     create table tree_version_element (
         element_link Text not null,
         depth int4 not null,
+        merge_conflict boolean default false not null,
         name_path Text not null,
         parent_id Text,
         taxon_id int8 not null,
