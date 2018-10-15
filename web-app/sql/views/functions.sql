@@ -7,15 +7,16 @@ create function basionym(nameid bigint)
   returns bigint
 language sql
 as $$
-select coalesce(bas_name.id, primary_inst.name_id)
-from instance primary_inst
-       left join instance bas_inst
-       join name bas_name on bas_inst.name_id = bas_name.id
-       join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name = 'basionym'
-       join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
-       join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
-where primary_inst.name_id = nameid
-limit 1;
+select coalesce(
+         (select coalesce(bas_name.id, primary_inst.name_id)
+          from instance primary_inst
+                 left join instance bas_inst
+                 join name bas_name on bas_inst.name_id = bas_name.id
+                 join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name = 'basionym'
+                 join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
+                 join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
+          where primary_inst.name_id = nameid
+          limit 1), nameid);
 $$;
 
 -- Find earliest local instance for a name.
@@ -31,7 +32,6 @@ from name n
        join reference r on i.reference_id = r.id on case when nt.autonym then n.parent_id else n.id end = i.name_id
 where n.id = nameid
 group by n.id, sort_name
-limit 1;
 $$;
 
 -- find the name an orth var or alt name is of
@@ -41,21 +41,21 @@ create function orth_or_alt_of(nameid bigint)
   returns bigint
 language sql
 as $$
-select alt_of_inst.name_id
-from name n
-       join name_status ns on n.name_status_id = ns.id
-       join instance alt_inst on n.id = alt_inst.name_id
-       join instance_type alt_it
-         on alt_inst.instance_type_id = alt_it.id and alt_it.name in ('orthographic variant', 'alternative name')
-       join instance alt_of_inst on alt_of_inst.id = alt_inst.cited_by_id
-where n.id = nameid
-  and ns.name in ('orth. var.', 'nom. alt.');
+select coalesce((select alt_of_inst.name_id
+                 from name n
+                        join name_status ns on n.name_status_id = ns.id
+                        join instance alt_inst on n.id = alt_inst.name_id
+                        join instance_type alt_it on alt_inst.instance_type_id = alt_it.id and
+                                                     alt_it.name in ('orthographic variant', 'alternative name')
+                        join instance alt_of_inst on alt_of_inst.id = alt_inst.cited_by_id
+                 where n.id = nameid
+                   and ns.name in ('orth. var.', 'nom. alt.') limit 1), nameid)
 $$;
 
 -- get the synonyms of a name in flora order for apni
 
-drop function if exists apni_ordered_synonymy(bigint);
-create function apni_ordered_synonymy(instanceid bigint)
+drop function if exists apni_ordered_nom_synonymy(bigint);
+create function apni_ordered_nom_synonymy(instanceid bigint)
   returns TABLE(instance_id      bigint,
                 instance_uri     text,
                 instance_type    text,
@@ -71,10 +71,63 @@ create function apni_ordered_synonymy(instanceid bigint)
                 page             text,
                 sort_name        text,
                 misapplied       boolean,
+                ref_id           bigint)
+language sql
+as $$
+select i.id,
+       i.uri,
+       it.has_label as instance_type,
+       it.id        as instance_type_id,
+       n.id         as name_id,
+       n.uri,
+       n.full_name,
+       n.full_name_html,
+       ns.name      as name_status,
+       r.citation,
+       r.citation_html,
+       r.year,
+       cites.page,
+       n.sort_name,
+       false,
+       r.id
+from instance i
+       join instance_type it on i.instance_type_id = it.id and it.nomenclatural
+       join name n on i.name_id = n.id
+       join name_status ns on n.name_status_id = ns.id
+       left outer join instance cites on i.cites_id = cites.id
+       left outer join reference r on cites.reference_id = r.id
+where i.cited_by_id = instanceid
+order by (it.sort_order < 20) desc,
+         it.nomenclatural desc,
+         r.year,
+         n.sort_name,
+         it.pro_parte,
+         it.doubtful,
+         cites.page,
+         cites.id;
+$$;
+
+drop function if exists apni_ordered_other_synonymy(bigint);
+create function apni_ordered_other_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_uri     text,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                name_uri         text,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
                 group_name       text,
                 group_head       boolean,
                 group_id         bigint,
                 group_year       integer,
+                misapplied       boolean,
                 ref_id           bigint)
 language sql
 as $$
@@ -92,30 +145,65 @@ select i.id,
        r.year,
        cites.page,
        n.sort_name,
-       it.misapplied,
        ng.group_name                   as group_name,
        ng.group_id = n.id              as group_head,
        coalesce(ng.group_id, n.id)     as group_id,
        coalesce(ng.group_year, r.year) as group_year,
+       it.misapplied,
        r.id
 from instance i
-       join instance_type it on i.instance_type_id = it.id
+       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural
        join name n on i.name_id = n.id
-       left outer join first_ref(basionym(coalesce(orth_or_alt_of(n.id), n.id))) ng on not it.nomenclatural
+       left outer join first_ref(basionym(orth_or_alt_of(n.id))) ng on true
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
 where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
-         it.nomenclatural desc,
          it.taxonomic desc,
-         group_year, group_id, group_head desc,
+         group_year,
+         group_id,
+         group_head desc,
          group_name,
-         n.id = ng.group_id desc,
          r.year,
          n.sort_name,
          it.pro_parte,
-         it.misapplied desc, it.doubtful, cites.page, cites.id;
+         it.misapplied desc,
+         it.doubtful,
+         cites.page,
+         cites.id;
+$$;
+
+
+drop function if exists apni_ordered_synonymy(bigint);
+
+create function apni_ordered_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_uri     text,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                name_uri         text,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
+                misapplied       boolean,
+                ref_id           bigint)
+language sql
+as $$
+
+select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
+       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+from apni_ordered_nom_synonymy(instanceid)
+union all
+select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
+       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+from apni_ordered_other_synonymy(instanceid)
 $$;
 
 -- apni ordered synonymy as a text output
@@ -297,7 +385,7 @@ FROM apni_ordered_synonymy(instanceid)
        join instance_type it on instance_type_id = it.id
 $$;
 
--- build JSONB representation of synonyms inside a shard
+-- build JSONB representation of synonyms inside a shard TODO fix links
 DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)
   RETURNS JSONB
