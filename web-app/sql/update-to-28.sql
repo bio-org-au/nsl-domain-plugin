@@ -798,6 +798,8 @@ drop function if exists current_synonyms_as_html(bigint);
 
 update instance set bhl_url = null where bhl_url = '';
 
+delete from notification;
+
 -- version
 UPDATE db_version
 SET version = 28
