@@ -224,7 +224,7 @@ select i.id,
        it.misapplied,
        r.id
 from instance i
-       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural
+       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
        join name n on i.name_id = n.id
        left outer join first_ref(basionym(orth_or_alt_of(n.id))) ng on true
        join name_status ns on n.name_status_id = ns.id
@@ -234,9 +234,8 @@ where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.taxonomic desc,
          group_year,
-         group_id,
-         group_head desc,
          group_name,
+         group_head desc,
          r.year,
          n.sort_name,
          it.pro_parte,
@@ -245,7 +244,6 @@ order by (it.sort_order < 20) desc,
          cites.page,
          cites.id;
 $$;
-
 
 drop function if exists apni_ordered_synonymy(bigint);
 

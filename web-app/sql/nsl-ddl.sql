@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -404,8 +404,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1051,14 +1051,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1671,7 +1671,7 @@ select i.id,
        it.misapplied,
        r.id
 from instance i
-       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural
+       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
        join name n on i.name_id = n.id
        left outer join first_ref(basionym(orth_or_alt_of(n.id))) ng on true
        join name_status ns on n.name_status_id = ns.id
@@ -1681,9 +1681,8 @@ where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.taxonomic desc,
          group_year,
-         group_id,
-         group_head desc,
          group_name,
+         group_head desc,
          r.year,
          n.sort_name,
          it.pro_parte,
@@ -1692,7 +1691,6 @@ order by (it.sort_order < 20) desc,
          cites.page,
          cites.id;
 $$;
-
 
 drop function if exists apni_ordered_synonymy(bigint);
 
