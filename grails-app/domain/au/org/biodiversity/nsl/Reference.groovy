@@ -100,7 +100,7 @@ class Reference {
     }
 
     static constraints = {
-        uri nullable: true, unique: true
+        uri nullable: true
         doi nullable: true, unique: true
         title maxSize: 2000
         displayTitle maxSize: 2000

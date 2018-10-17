@@ -88,7 +88,7 @@ class Instance {
     }
 
     static constraints = {
-        uri nullable: true, unique: true
+        uri nullable: true
         verbatimNameString nullable: true
         page nullable: true
         pageQualifier nullable: true

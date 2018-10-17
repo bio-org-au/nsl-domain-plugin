@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -404,8 +404,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -788,9 +788,6 @@
     alter table if exists author 
         add constraint UK_9kovg6nyb11658j2tv2yv4bsi  unique (abbrev);
 
-    alter table if exists author 
-        add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
-
     create index Author_Abbrev_Index on author (abbrev);
 
     create index Author_Name_Index on author (name);
@@ -821,9 +818,6 @@
         add constraint unique_from_id  unique (to_id, from_id);
 
     create index id_mapper_from_Index on id_mapper (from_id, namespace_id, system);
-
-    alter table if exists instance 
-        add constraint UK_bl9pesvdo9b3mp2qdna1koqc7  unique (uri);
 
     create index Instance_CitedBy_Index on instance (cited_by_id);
 
@@ -867,9 +861,6 @@
 
     alter table if exists language 
         add constraint UK_g8hr207ijpxlwu10pewyo65gv  unique (name);
-
-    alter table if exists name 
-        add constraint UK_66rbixlxv32riosi9ob62m8h5  unique (uri);
 
     create index Name_author_Index on name (author_id);
 
@@ -929,9 +920,6 @@
 
     alter table if exists reference 
         add constraint UK_kqwpm0crhcq4n9t9uiyfxo2df  unique (doi);
-
-    alter table if exists reference 
-        add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
     create index Reference_Author_Index on reference (author_id);
 
@@ -1063,14 +1051,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 

@@ -117,7 +117,7 @@ class Name {
     }
 
     static constraints = {
-        uri nullable: true, unique: true
+        uri nullable: true
         nameElement nullable: true
         statusSummary nullable: true, maxSize: 50
         updatedBy maxSize: 50
