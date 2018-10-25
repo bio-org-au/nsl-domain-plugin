@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -404,8 +404,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1051,14 +1051,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1511,11 +1511,14 @@ Add auditing support to the given table. Row-level changes will be logged with f
 $body$;
 
 -- set up triggers using the following selects after import
+-- select * from information_schema.triggers;
+--
 -- select audit.audit_table('author');
 -- select audit.audit_table('instance');
 -- select audit.audit_table('name');
 -- select audit.audit_table('reference');
-
+-- select audit.audit_table('instance_note');
+-- select audit.audit_table('comment');
 -- functions.sql
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
@@ -1531,7 +1534,7 @@ select coalesce(
           from instance primary_inst
                  left join instance bas_inst
                  join name bas_name on bas_inst.name_id = bas_name.id
-                 join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name = 'basionym'
+                 join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name in ('basionym','replaced synonym')
                  join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
                  join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
           where primary_inst.name_id = nameid
@@ -1546,9 +1549,9 @@ language sql
 as $$
 select n.id group_id, n.sort_name group_name, min(r.year)
 from name n
-       join name_type nt on n.name_type_id = nt.id
        join instance i
-       join reference r on i.reference_id = r.id on case when nt.autonym then n.parent_id else n.id end = i.name_id
+       join reference r on i.reference_id = r.id
+         on n.id  = i.name_id
 where n.id = nameid
 group by n.id, sort_name
 $$;
@@ -1568,7 +1571,7 @@ select coalesce((select alt_of_inst.name_id
                                                      alt_it.name in ('orthographic variant', 'alternative name')
                         join instance alt_of_inst on alt_of_inst.id = alt_inst.cited_by_id
                  where n.id = nameid
-                   and ns.name in ('orth. var.', 'nom. alt.') limit 1), nameid)
+                   and ns.name ~ '(orth. var.|nom. alt.)' limit 1), nameid) id
 $$;
 
 -- get the synonyms of a name in flora order for apni
@@ -1647,15 +1650,18 @@ create function apni_ordered_other_synonymy(instanceid bigint)
                 group_id         bigint,
                 group_year       integer,
                 misapplied       boolean,
-                ref_id           bigint)
+                ref_id           bigint,
+                og_id            bigint,
+                og_group         boolean,
+                og_head          boolean      )
 language sql
 as $$
-select i.id,
-       i.uri,
+select i.id                            as instance_id,
+       i.uri                           as instance_uri,
        it.has_label                    as instance_type,
        it.id                           as instance_type_id,
        n.id                            as name_id,
-       n.uri,
+       n.uri                           as name_uri,
        n.full_name,
        n.full_name_html,
        ns.name                         as name_status,
@@ -1669,11 +1675,16 @@ select i.id,
        coalesce(ng.group_id, n.id)     as group_id,
        coalesce(ng.group_year, r.year) as group_year,
        it.misapplied,
-       r.id
+       r.id                            as ref_id,
+       og                              as og_id,
+       og = group_id                   as og_group,
+       og = n.id                       as og_head
 from instance i
        join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
        join name n on i.name_id = n.id
-       left outer join first_ref(basionym(orth_or_alt_of(n.id))) ng on true
+       join name_type nt on n.name_type_id = nt.id
+       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og on true
+       left outer join first_ref(basionym(og)) ng on true
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
@@ -1683,6 +1694,8 @@ order by (it.sort_order < 20) desc,
          group_year,
          group_name,
          group_head desc,
+         og_group desc,
+         og_head desc,
          r.year,
          n.sort_name,
          it.pro_parte,
