@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -351,6 +351,7 @@
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
         bhl_url varchar(4000),
+        cached_synonymy_html text,
         cited_by_id int8,
         cites_id int8,
         created_at timestamp with time zone not null,
@@ -404,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1064,14 +1065,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 

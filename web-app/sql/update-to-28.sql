@@ -66,6 +66,8 @@ alter table tree_version_element add column merge_conflict boolean default false
 -- alter table if exists reference
 --   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
+alter table instance add column cached_synonymy_html text;
+
 -- NSL-3065
 alter table name_category add column max_parents_allowed int4 default 0 not null;
 alter table name_category add column min_parents_required int4 default 0 not null;

@@ -45,6 +45,8 @@ class Instance {
     String createdBy
     Timestamp createdAt
 
+    String cachedSynonymyHtml  // cache for the current synonymyHtml used on a tree
+
     static hasMany = [
             instancesForCitedBy: Instance,
             instancesForCites  : Instance,
@@ -85,6 +87,7 @@ class Instance {
         citedBy index: 'Instance_CitedBy_Index'
         updatedAt sqlType: 'timestamp with time zone'
         createdAt sqlType: 'timestamp with time zone'
+        cachedSynonymyHtml sqlType: 'text'
     }
 
     static constraints = {
@@ -100,6 +103,7 @@ class Instance {
         sourceSystem nullable: true, maxSize: 50
         sourceIdString nullable: true, maxSize: 100
         sourceId nullable: true
+        cachedSynonymyHtml nullable: true
     }
 
     @Override
