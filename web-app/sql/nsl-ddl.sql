@@ -499,9 +499,22 @@
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
         description_html text,
+        max_parents_allowed int4 not null,
+        min_parents_required int4 not null,
         name varchar(50) not null,
+        parent_1_help_text text,
+        parent_2_help_text text,
         rdf_id varchar(50),
+        requires_family boolean default false not null,
+        requires_higher_ranked_parent boolean default false not null,
+        requires_name_element boolean default false not null,
         sort_order int4 default 0 not null,
+        takes_author_only boolean default false not null,
+        takes_authors boolean default false not null,
+        takes_cultivar_scoped_parent boolean default false not null,
+        takes_hybrid_scoped_parent boolean default false not null,
+        takes_name_element boolean default false not null,
+        takes_verbatim_rank boolean default false not null,
         primary key (id)
     );
 

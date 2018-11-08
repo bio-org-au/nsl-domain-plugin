@@ -66,6 +66,113 @@ alter table tree_version_element add column merge_conflict boolean default false
 -- alter table if exists reference
 --   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
+-- NSL-3065
+alter table name_category add column max_parents_allowed int4 default 0 not null;
+alter table name_category add column min_parents_required int4 default 0 not null;
+alter table name_category add column parent_1_help_text text;
+alter table name_category add column parent_2_help_text text;
+alter table name_category add column requires_family boolean default false not null;
+alter table name_category add column requires_higher_ranked_parent boolean default false not null;
+alter table name_category add column requires_name_element boolean default false not null;
+alter table name_category add column takes_author_only boolean default false not null;
+alter table name_category add column takes_authors boolean default false not null;
+alter table name_category add column takes_cultivar_scoped_parent boolean default false not null;
+alter table name_category add column takes_hybrid_scoped_parent boolean default false not null;
+alter table name_category add column takes_name_element boolean default false not null;
+alter table name_category add column takes_verbatim_rank boolean default false not null;
+
+update name_category
+set sort_order = 50,
+    description_html = 'names entered and edited as cultivar names',
+    min_parents_required = 1,
+    max_parents_allowed = 1,
+    parent_1_help_text = 'cultivar - genus and below, or unranked if unranked',
+    takes_hybrid_scoped_parent = false,
+    requires_family = true,
+    takes_name_element = true,
+    takes_authors = false,
+    takes_author_only = false,
+    requires_name_element = true,
+    requires_higher_ranked_parent = false,
+    takes_cultivar_scoped_parent  = true,
+    takes_verbatim_rank = true
+where name = 'cultivar';
+
+update name_category
+set sort_order = 10,
+    description_html = 'names entered and edited as scientific names',
+    min_parents_required = 1,
+    max_parents_allowed = 1,
+    parent_1_help_text = 'ordinary - restricted by rank, or unranked if unranked',
+    takes_hybrid_scoped_parent = false,
+    requires_family = true,
+    takes_name_element = true,
+    takes_authors = true,
+    takes_author_only = false,
+    requires_name_element = true,
+    requires_higher_ranked_parent = true,
+    takes_cultivar_scoped_parent  = false,
+    takes_verbatim_rank = true
+where name = 'scientific';
+
+insert into name_category
+    (name,
+     sort_order,
+     description_html,
+     min_parents_required,
+     max_parents_allowed,
+     parent_1_help_text,
+     takes_hybrid_scoped_parent,
+     requires_family,
+     takes_name_element,
+     takes_authors,
+     takes_author_only,
+     requires_name_element,
+     requires_higher_ranked_parent,
+     parent_2_help_text,
+     takes_cultivar_scoped_parent ,
+     takes_verbatim_rank)
+values
+       ('cultivar hybrid',60,'names entered and edited as cultivar hybrid names',2,2,'cultivar - genus and below, or unranked if unranked',false,true,true,false,false,true,false,'cultivar - genus and below, or unranked if unranked',true,true),
+       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,false,true,true),
+       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,false,false,false),
+       ('scientific hybrid formula',30,'names entered and edited as scientific hybrid formulae',2,2,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,'hybrid - species and below or unranked if unranked',false,true),
+       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,false,true,true)
+;
+
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[default]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[n/a]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[unknown]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'acra';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'acra hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'candidatus';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'common';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'cultivar';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'cultivar hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'cultivar hybrid formula';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'graft/chimera';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'hybrid autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'hybrid formula parents known';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula unknown 2nd parent' ) where name_type.name = 'hybrid formula unknown 2nd parent';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'informal';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'intergrade';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'named hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'named hybrid autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'pbr';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'pbr hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'phrase name' ) where name_type.name = 'phrase name';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'sanctioned';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'scientific';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'trade';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'trade hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'vernacular';
+
+delete from name_category where name = '[n/a]';
+delete from name_category where name = '[unknown]';
+delete from name_category where name = 'common';
+delete from name_category where name = 'informal';
+
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
 
