@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -405,8 +405,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1065,14 +1065,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1661,13 +1661,13 @@ create function apni_ordered_other_synonymy(instanceid bigint)
                 sort_name        text,
                 group_name       text,
                 group_head       boolean,
-                group_id         bigint,
                 group_year       integer,
                 misapplied       boolean,
                 ref_id           bigint,
                 og_id            bigint,
-                og_group         boolean,
-                og_head          boolean      )
+                og_head          boolean,
+                og_name text,
+                og_year integer)
 language sql
 as $$
 select i.id                            as instance_id,
@@ -1686,19 +1686,23 @@ select i.id                            as instance_id,
        n.sort_name,
        ng.group_name                   as group_name,
        ng.group_id = n.id              as group_head,
-       coalesce(ng.group_id, n.id)     as group_id,
        coalesce(ng.group_year, r.year) as group_year,
        it.misapplied,
        r.id                            as ref_id,
-       og                              as og_id,
-       og = group_id                   as og_group,
-       og = n.id                       as og_head
+       og_id                           as og_id,
+       og_id = n.id                    as og_head,
+       coalesce(ogn.sort_name, n.sort_name) as og_name,
+       coalesce(ogr.year,r.year)       as og_year
 from instance i
        join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
        join name n on i.name_id = n.id
        join name_type nt on n.name_type_id = nt.id
-       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og on true
-       left outer join first_ref(basionym(og)) ng on true
+       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og_id on true
+       left outer join name ogn on ogn.id = og_id and not og_id = n.id
+       left outer join instance ogi
+       join reference ogr on ogr.id = ogi.reference_id
+         on ogi.name_id = og_id and ogi.id = i.cited_by_id and not og_id = n.id
+       left outer join first_ref(basionym(og_id)) ng on true
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
@@ -1708,7 +1712,8 @@ order by (it.sort_order < 20) desc,
          group_year,
          group_name,
          group_head desc,
-         og_group desc,
+         og_year,
+         og_name,
          og_head desc,
          r.year,
          n.sort_name,

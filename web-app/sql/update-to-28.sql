@@ -67,6 +67,8 @@ alter table tree_version_element add column merge_conflict boolean default false
 --   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
 alter table instance add column cached_synonymy_html text;
+update instance set cached_synonymy_html = synonyms_as_html(id) where id in (select distinct instance_id from tree_element);
+delete from notification;
 
 -- NSL-3065
 alter table name_category add column max_parents_allowed int4 default 0 not null;
@@ -306,13 +308,13 @@ create function apni_ordered_other_synonymy(instanceid bigint)
                 sort_name        text,
                 group_name       text,
                 group_head       boolean,
-                group_id         bigint,
                 group_year       integer,
                 misapplied       boolean,
                 ref_id           bigint,
                 og_id            bigint,
-                og_group         boolean,
-                og_head          boolean      )
+                og_head          boolean,
+                og_name text,
+                og_year integer)
 language sql
 as $$
 select i.id                            as instance_id,
@@ -331,19 +333,23 @@ select i.id                            as instance_id,
        n.sort_name,
        ng.group_name                   as group_name,
        ng.group_id = n.id              as group_head,
-       coalesce(ng.group_id, n.id)     as group_id,
        coalesce(ng.group_year, r.year) as group_year,
        it.misapplied,
        r.id                            as ref_id,
-       og                              as og_id,
-       og = group_id                   as og_group,
-       og = n.id                       as og_head
+       og_id                           as og_id,
+       og_id = n.id                    as og_head,
+       coalesce(ogn.sort_name, n.sort_name) as og_name,
+       coalesce(ogr.year,r.year)       as og_year
 from instance i
        join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
        join name n on i.name_id = n.id
        join name_type nt on n.name_type_id = nt.id
-       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og on true
-       left outer join first_ref(basionym(og)) ng on true
+       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og_id on true
+       left outer join name ogn on ogn.id = og_id and not og_id = n.id
+       left outer join instance ogi
+       join reference ogr on ogr.id = ogi.reference_id
+         on ogi.name_id = og_id and ogi.id = i.cited_by_id and not og_id = n.id
+       left outer join first_ref(basionym(og_id)) ng on true
        join name_status ns on n.name_status_id = ns.id
        left outer join instance cites on i.cites_id = cites.id
        left outer join reference r on cites.reference_id = r.id
@@ -353,7 +359,8 @@ order by (it.sort_order < 20) desc,
          group_year,
          group_name,
          group_head desc,
-         og_group desc,
+         og_year,
+         og_name,
          og_head desc,
          r.year,
          n.sort_name,
