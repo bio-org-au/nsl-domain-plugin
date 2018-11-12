@@ -867,13 +867,7 @@ alter table name add column apni_json jsonb;
 
 update tree_element te
 set synonyms_html = coalesce(synonyms_as_html(te.id), '<synonyms></synonyms>')
-from tree_version_element tve join tree on tve.tree_version_id = tree.current_tree_version_id
-where tve.tree_element_id = te.id
-;
-
-update tree_element te
-set synonyms_html = coalesce(synonyms_as_html(te.id), '<synonyms></synonyms>')
-from tree_version_element tve join tree on tve.tree_version_id = tree.default_draft_tree_version_id
+from tree_version_element tve join tree on tve.tree_version_id in (tree.current_tree_version_id, tree.default_draft_tree_version_id)
 where tve.tree_element_id = te.id
 ;
 
