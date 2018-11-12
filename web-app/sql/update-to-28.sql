@@ -865,11 +865,11 @@ alter table name add column apni_json jsonb;
 
 -- re-write the synonymy html with new ordering - note this may re-write some synonymy in the tree but we can't avoid that.
 
-update tree_element te
-set synonyms_html = coalesce(synonyms_as_html(te.id), '<synonyms></synonyms>')
-from tree_version_element tve join tree on tve.tree_version_id in (tree.current_tree_version_id, tree.default_draft_tree_version_id)
-where tve.tree_element_id = te.id
-;
+-- update tree_element te
+-- set synonyms_html = coalesce(synonyms_as_html(te.instance_id), '<synonyms></synonyms>')
+-- from tree_version_element tve join tree on tve.tree_version_id in (tree.current_tree_version_id, tree.default_draft_tree_version_id)
+-- where tve.tree_element_id = te.id
+-- ;
 
 -- clean up bhl_urls that are blank
 
