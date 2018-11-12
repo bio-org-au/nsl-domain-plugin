@@ -863,60 +863,19 @@ $$;
 
 alter table name add column apni_json jsonb;
 
--- re-write the synonymy html based on the synonymy at the time
-
-drop function if exists synonym_current_as_html(bigint);
-
-create function synonym_current_as_html(elementid bigint)
-  returns TABLE(html text)
-language sql
-as $$
-SELECT CASE
-         WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ' <type>' || it.name || '</type></nom>'
-         WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ' <type>' || it.name || '</type></tax>'
-         WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
-                      citation_html
-                        ||
-                      '</citation></mis>'
-         WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ' <type>' || it.name || '</type></syn>'
-         ELSE ''
-           END
-from tree_element te,
-     apni_ordered_synonymy(te.instance_id) ord_syn
-       join instance_type it on ord_syn.instance_type_id = it.id
-where te.id = elementid
-  and ord_syn.instance_id in (select ((tax_syn1 ->> 'instance_id') :: numeric :: bigint)
-                              FROM jsonb_array_elements(te.synonyms -> 'list') AS tax_syn1);
-$$;
-
-drop function if exists current_synonyms_as_html(bigint);
-
-create function current_synonyms_as_html(elementid bigint)
-  returns text
-language sql
-as $$
-SELECT '<synonyms>' || string_agg(html, '') || '</synonyms>'
-FROM synonym_current_as_html(elementid) AS html;
-$$;
+-- re-write the synonymy html with new ordering - note this may re-write some synonymy in the tree but we can't avoid that.
 
 update tree_element te
-set synonyms_html = coalesce(current_synonyms_as_html(te.id), '<synonyms></synonyms>')
+set synonyms_html = coalesce(synonyms_as_html(te.id), '<synonyms></synonyms>')
 from tree_version_element tve join tree on tve.tree_version_id = tree.current_tree_version_id
 where tve.tree_element_id = te.id
 ;
 
 update tree_element te
-set synonyms_html = coalesce(current_synonyms_as_html(te.id), '<synonyms></synonyms>')
+set synonyms_html = coalesce(synonyms_as_html(te.id), '<synonyms></synonyms>')
 from tree_version_element tve join tree on tve.tree_version_id = tree.default_draft_tree_version_id
 where tve.tree_element_id = te.id
 ;
-
-drop function if exists synonym_current_as_html(bigint);
-drop function if exists current_synonyms_as_html(bigint);
 
 -- clean up bhl_urls that are blank
 
