@@ -67,8 +67,6 @@ alter table tree_version_element add column merge_conflict boolean default false
 --   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
 alter table instance add column cached_synonymy_html text;
-update instance set cached_synonymy_html = synonyms_as_html(id) where id in (select distinct instance_id from tree_element);
-delete from notification;
 
 -- NSL-3065
 alter table name_category add column max_parents_allowed int4 default 0 not null;
@@ -874,6 +872,9 @@ alter table name add column apni_json jsonb;
 -- clean up bhl_urls that are blank
 
 update instance set bhl_url = null where bhl_url = '';
+
+-- update the cached_synonymy_html
+update instance set cached_synonymy_html = coalesce(synonyms_as_html(id), '<synonyms></synonyms>') where id in (select distinct instance_id from tree_element);
 
 delete from notification;
 
