@@ -876,6 +876,32 @@ update instance set bhl_url = null where bhl_url = '';
 -- update the cached_synonymy_html
 update instance set cached_synonymy_html = coalesce(synonyms_as_html(id), '<synonyms></synonyms>') where id in (select distinct instance_id from tree_element);
 
+-- NSL-3097 NSL-2884 update hybrid name_elements
+update name set name_element = ne,  name_path = np || '/' || ne
+from (select n.id, p1.name_path np, (p1.name_element || ' ' || nt.connector|| ' ' || p2.name_element) ne
+      from name n
+             join name_type nt on n.name_type_id = nt.id and nt.formula
+             join name p1 on n.parent_id = p1.id
+             join name p2 on n.second_parent_id = p2.id
+      where p1.name_element <> '[unknown]'
+        and p2.name_element <> '[unknown]'
+        and (n.name_element is null or n.name_element = '[unknown]')) as hybrid
+where name.id = hybrid.id
+;
+
+-- do it twice to catch the last 10 that were unknown parents
+update name set name_element = ne,  name_path = np || '/' || ne
+from (select n.id, p1.name_path np, (p1.name_element || ' ' || nt.connector|| ' ' || p2.name_element) ne
+      from name n
+             join name_type nt on n.name_type_id = nt.id and nt.formula
+             join name p1 on n.parent_id = p1.id
+             join name p2 on n.second_parent_id = p2.id
+      where p1.name_element <> '[unknown]'
+        and p2.name_element <> '[unknown]'
+        and (n.name_element is null or n.name_element = '[unknown]')) as hybrid
+where name.id = hybrid.id
+;
+
 delete from notification;
 
 -- version
