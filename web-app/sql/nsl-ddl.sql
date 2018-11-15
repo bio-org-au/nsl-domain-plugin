@@ -1934,6 +1934,15 @@ FROM apni_ordered_synonymy(instanceid)
        join instance_type it on instance_type_id = it.id
 $$;
 
+drop function if exists synonyms_as_html(bigint);
+create function synonyms_as_html(instance_id bigint) returns text
+language sql
+as $$
+SELECT '<synonyms>' || string_agg(html, '') || '</synonyms>'
+FROM synonym_as_html(instance_id) AS html;
+$$
+;
+
 -- build JSONB representation of synonyms inside a shard TODO fix links
 DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)

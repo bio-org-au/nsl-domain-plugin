@@ -579,6 +579,15 @@ FROM apni_ordered_synonymy(instanceid)
        join instance_type it on instance_type_id = it.id
 $$;
 
+drop function if exists synonyms_as_html(bigint);
+create function synonyms_as_html(instance_id bigint) returns text
+language sql
+as $$
+SELECT '<synonyms>' || string_agg(html, '') || '</synonyms>'
+FROM synonym_as_html(instance_id) AS html;
+$$
+;
+
 -- build JSONB representation of synonyms inside a shard TODO fix links
 DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)
@@ -861,13 +870,15 @@ $$;
 
 alter table name add column apni_json jsonb;
 
--- re-write the synonymy html with new ordering - note this may re-write some synonymy in the tree but we can't avoid that.
+-- re-write the synonymy html with new ordering - on current draft elements
+-- this will include current published elements, but shouldn't change synonymy except if it has been changed within the
+-- last 24 hours and not published.
 
--- update tree_element te
--- set synonyms_html = coalesce(synonyms_as_html(te.instance_id), '<synonyms></synonyms>')
--- from tree_version_element tve join tree on tve.tree_version_id in (tree.current_tree_version_id, tree.default_draft_tree_version_id)
--- where tve.tree_element_id = te.id
--- ;
+update tree_element te
+set synonyms_html = coalesce(synonyms_as_html(te.instance_id), '<synonyms></synonyms>')
+from tree_version_element tve
+       join tree_version tv on tve.tree_version_id = tv.id and tv.published = false
+where tve.tree_element_id = te.id;
 
 -- clean up bhl_urls that are blank
 
