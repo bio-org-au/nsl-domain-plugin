@@ -571,17 +571,17 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<nom><a href="' || sconf.value || name_uri || '/api/apni-format">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<tax><a href="' || sconf.value || name_uri || '/api/apni-format">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<mis><a href="' || sconf.value || name_uri || '/api/apni-format">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type> by <citation>' ||
                       citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<syn><a href="' || sconf.value || name_uri || '/api/apni-format">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
