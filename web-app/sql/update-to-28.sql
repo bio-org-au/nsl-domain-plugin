@@ -571,22 +571,24 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<nom><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<tax><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<mis><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type> by <citation>' ||
                       citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<syn><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
 FROM apni_ordered_synonymy(instanceid)
-       join instance_type it on instance_type_id = it.id
+       join instance_type it on instance_type_id = it.id,
+     shard_config sconf
+where sconf.name = 'mapper host'
 $$;
 
 drop function if exists synonyms_as_html(bigint);
@@ -880,6 +882,10 @@ $$;
 
 alter table name add column apni_json jsonb;
 
+-- add default mapper host to shard config (using tree.host_name
+INSERT INTO shard_config (name, value, deprecated, use_notes)
+    (select 'mapper host', t.host_name || '/' , false, 'The external host address for the mapper with a trailing slash' from tree t where t.accepted_tree);
+
 -- re-write the synonymy html with new ordering - on current draft elements
 -- this will include current published elements, but shouldn't change synonymy except if it has been changed within the
 -- last 24 hours and not published.
@@ -924,6 +930,9 @@ where name.id = hybrid.id
 ;
 
 delete from notification;
+
+-- add default mapper host to shard config
+INSERT INTO shard_config (name, value, deprecated, use_notes) VALUES ('mapper host', 'SET ME', false, 'The external host address for the mapper with a trailing slash');
 
 -- version
 UPDATE db_version

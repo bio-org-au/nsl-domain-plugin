@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -405,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1067,14 +1067,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1920,22 +1920,24 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<nom><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<tax><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<mis><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type> by <citation>' ||
                       citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<syn><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
 FROM apni_ordered_synonymy(instanceid)
-       join instance_type it on instance_type_id = it.id
+       join instance_type it on instance_type_id = it.id,
+     shard_config sconf
+where sconf.name = 'mapper host'
 $$;
 
 drop function if exists synonyms_as_html(bigint);

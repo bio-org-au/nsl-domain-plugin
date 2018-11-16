@@ -382,22 +382,24 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<nom><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<tax><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<mis><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type> by <citation>' ||
                       citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<syn><a href="' || sconf.value || name_uri || '">' || full_name_html || '</a>, <name-status class="' || name_status|| '">' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
 FROM apni_ordered_synonymy(instanceid)
-       join instance_type it on instance_type_id = it.id
+       join instance_type it on instance_type_id = it.id,
+     shard_config sconf
+where sconf.name = 'mapper host'
 $$;
 
 drop function if exists synonyms_as_html(bigint);
