@@ -66,7 +66,11 @@ alter table tree_version_element add column merge_conflict boolean default false
 -- alter table if exists reference
 --   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
 
+-- add cached synonymy on instance
 alter table instance add column cached_synonymy_html text;
+
+-- NSL-3099 add changed_combination flag on name.
+alter table name add column changed_combination boolean default false not null;
 
 -- NSL-3065
 alter table name_category add column max_parents_allowed int4 default 0 not null;
@@ -82,6 +86,7 @@ alter table name_category add column takes_cultivar_scoped_parent boolean defaul
 alter table name_category add column takes_hybrid_scoped_parent boolean default false not null;
 alter table name_category add column takes_name_element boolean default false not null;
 alter table name_category add column takes_verbatim_rank boolean default false not null;
+alter table name_category add column takes_rank boolean default false not null;
 
 update name_category
 set sort_order = 50,
@@ -97,7 +102,8 @@ set sort_order = 50,
     requires_name_element = true,
     requires_higher_ranked_parent = false,
     takes_cultivar_scoped_parent  = true,
-    takes_verbatim_rank = true
+    takes_verbatim_rank = true,
+    takes_rank = true
 where name = 'cultivar';
 
 update name_category
@@ -114,7 +120,8 @@ set sort_order = 10,
     requires_name_element = true,
     requires_higher_ranked_parent = true,
     takes_cultivar_scoped_parent  = false,
-    takes_verbatim_rank = true
+    takes_verbatim_rank = true,
+    takes_rank = true
 where name = 'scientific';
 
 insert into name_category
@@ -133,13 +140,14 @@ insert into name_category
      requires_higher_ranked_parent,
      parent_2_help_text,
      takes_cultivar_scoped_parent ,
-     takes_verbatim_rank)
+     takes_verbatim_rank,
+     takes_rank)
 values
-       ('cultivar hybrid',60,'names entered and edited as cultivar hybrid names',2,2,'cultivar - genus and below, or unranked if unranked',false,true,true,false,false,true,false,'cultivar - genus and below, or unranked if unranked',true,true),
-       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,false,true,true),
-       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,false,false,false),
-       ('scientific hybrid formula',30,'names entered and edited as scientific hybrid formulae',2,2,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,'hybrid - species and below or unranked if unranked',false,true),
-       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,false,true,true)
+       ('cultivar hybrid',60,'names entered and edited as cultivar hybrid names',2,2,'cultivar - genus and below, or unranked if unranked',false,true,true,false,false,true,false,'cultivar - genus and below, or unranked if unranked',true,true,true),
+       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,false,true,true,false),
+       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,false,false,false,true),
+       ('scientific hybrid formula',30,'names entered and edited as scientific hybrid formulae',2,2,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,'hybrid - species and below or unranked if unranked',false,true,true),
+       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,false,true,true,true)
 ;
 
 update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[default]';
@@ -563,16 +571,18 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ' <type>' || it.name || '</type></nom>'
+                 THEN '<nom>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ' <type>' || it.name || '</type></tax>'
+                 THEN '<tax>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
-                      citation_html
-                        ||
-                      '</citation></mis>'
+                 THEN '<mis>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type> by <citation>' ||
+                      citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ' <type>' || it.name || '</type></syn>'
+                 THEN '<syn>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
 FROM apni_ordered_synonymy(instanceid)

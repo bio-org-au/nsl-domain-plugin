@@ -462,6 +462,7 @@
         apni_json jsonb,
         author_id int8,
         base_author_id int8,
+        changed_combination boolean default false not null,
         created_at timestamp with time zone not null,
         created_by varchar(50) not null,
         duplicate_of_id int8,
@@ -515,6 +516,7 @@
         takes_cultivar_scoped_parent boolean default false not null,
         takes_hybrid_scoped_parent boolean default false not null,
         takes_name_element boolean default false not null,
+        takes_rank boolean default false not null,
         takes_verbatim_rank boolean default false not null,
         primary key (id)
     );
@@ -1918,16 +1920,18 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ' <type>' || it.name || '</type></nom>'
+                 THEN '<nom>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ' <type>' || it.name || '</type></tax>'
+                 THEN '<tax>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
-                      citation_html
-                        ||
-                      '</citation></mis>'
+                 THEN '<mis>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || instance_type || '</type> by <citation>' ||
+                      citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ' <type>' || it.name || '</type></syn>'
+                 THEN '<syn>' || full_name_html || ' <name-status class="' || name_status|| '">' || name_status ||
+                      '</name-status> <year>'|| year || '<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
 FROM apni_ordered_synonymy(instanceid)

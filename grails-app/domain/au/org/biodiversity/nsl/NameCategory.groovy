@@ -38,6 +38,7 @@ class NameCategory {
     Boolean takesHybridScopedParent = false
     Boolean takesNameElement = false
     Boolean takesVerbatimRank = false
+    Boolean takesRank = false
 
     static hasMany = [nameTypes: NameType]
 
@@ -61,6 +62,7 @@ class NameCategory {
         takesHybridScopedParent defaultValue: false
         takesNameElement defaultValue: false
         takesVerbatimRank defaultValue: false
+        takesRank defaultValue: false
     }
 
     static constraints = {

@@ -51,6 +51,7 @@ class Name {
     Author sanctioningAuthor
 
     Boolean validRecord = false
+    Boolean changedCombination = false
 
     Long sourceDupOfId
     Name duplicateOf
@@ -86,6 +87,7 @@ class Name {
         version column: 'lock_version', defaultValue: "0"
         uri sqlType: 'text'
         validRecord defaultvalue: "false"
+        changedCombination defaultvalue: "false"
         orthVar defaultvalue: "false"
 
         nameElement index: 'Name_Name_Element_Index'
