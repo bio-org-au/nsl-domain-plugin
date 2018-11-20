@@ -3,7 +3,9 @@ alter table resource drop column if exists resource_type_id;
 alter table name drop column if exists apni_json;
 alter table author drop column if exists uri;
 alter table instance drop column if exists uri;
+alter table instance drop column if exists cached_synonymy_html;
 alter table name drop column if exists uri;
+alter table name drop column if exists published_year;
 alter table reference drop column if exists uri;
 alter table tree_version_element drop column if exists merge_conflict;
 drop table if exists resource_type;
@@ -885,6 +887,7 @@ $$;
 alter table name add column apni_json jsonb;
 
 -- add default mapper host to shard config (using tree.host_name
+delete from shard_config where name = 'mapper host';
 INSERT INTO shard_config (name, value, deprecated, use_notes)
     (select 'mapper host', t.host_name || '/' , false, 'The external host address for the mapper with a trailing slash' from tree t where t.accepted_tree);
 
@@ -932,9 +935,6 @@ where name.id = hybrid.id
 ;
 
 delete from notification;
-
--- add default mapper host to shard config
-INSERT INTO shard_config (name, value, deprecated, use_notes) VALUES ('mapper host', 'SET ME', false, 'The external host address for the mapper with a trailing slash');
 
 -- version
 UPDATE db_version
