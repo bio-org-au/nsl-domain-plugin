@@ -72,6 +72,10 @@ alter table instance add column cached_synonymy_html text;
 -- NSL-3099 add changed_combination flag on name.
 alter table name add column changed_combination boolean default false not null;
 
+-- NSL-3101 add published_year to name to support iczn
+alter table name add column published_year int4;
+alter table name add constraint published_year_limits check (published_year > 0 and published_year < 2500);
+
 -- NSL-3065
 alter table name_category add column max_parents_allowed int4 default 0 not null;
 alter table name_category add column min_parents_required int4 default 0 not null;

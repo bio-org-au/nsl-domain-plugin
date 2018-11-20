@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -405,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -479,6 +479,7 @@
         namespace_id int8 not null,
         orth_var boolean default false not null,
         parent_id int8,
+        published_year int4,
         sanctioning_author_id int8,
         second_parent_id int8,
         simple_name varchar(250),
@@ -1067,14 +1068,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -2257,6 +2258,8 @@ alter table name_type add constraint nt_unique_name unique (name_group_id, name)
 
 alter table name_status drop constraint if exists ns_unique_name;
 alter table name_status add constraint ns_unique_name unique (name_group_id, name);
+
+alter table name add constraint published_year_limits check (published_year > 1700 and published_year < 2500);
 
 -- pg_trgm indexs for like and regex queries NSL-1773
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

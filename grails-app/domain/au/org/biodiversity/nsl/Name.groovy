@@ -50,6 +50,8 @@ class Name {
 
     Author sanctioningAuthor
 
+    Integer publishedYear
+
     Boolean validRecord = false
     Boolean changedCombination = false
 
@@ -144,6 +146,7 @@ class Name {
         family nullable: true
         verbatimRank nullable: true, maxSize: 50
         apniJson nullable: true
+        publishedYear nullable: true, max: 2500, min: 1700
     }
 
     @Override

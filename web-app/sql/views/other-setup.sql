@@ -30,6 +30,8 @@ alter table name_type add constraint nt_unique_name unique (name_group_id, name)
 alter table name_status drop constraint if exists ns_unique_name;
 alter table name_status add constraint ns_unique_name unique (name_group_id, name);
 
+alter table name add constraint published_year_limits check (published_year > 1700 and published_year < 2500);
+
 -- pg_trgm indexs for like and regex queries NSL-1773
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX name_lower_full_name_gin_trgm
