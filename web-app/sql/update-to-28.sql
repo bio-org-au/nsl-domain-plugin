@@ -144,10 +144,10 @@ insert into name_category
      takes_rank)
 values
        ('cultivar hybrid',60,'names entered and edited as cultivar hybrid names',2,2,'cultivar - genus and below, or unranked if unranked',false,true,true,false,false,true,false,'cultivar - genus and below, or unranked if unranked',true,true,true),
-       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,false,true,true,false),
-       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,false,false,false,true),
+       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,null,true,true,false),
+       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,null,false,false,true),
        ('scientific hybrid formula',30,'names entered and edited as scientific hybrid formulae',2,2,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,'hybrid - species and below or unranked if unranked',false,true,true),
-       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,false,true,true,true)
+       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,null,true,true,true)
 ;
 
 update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[default]';
