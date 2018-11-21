@@ -901,6 +901,16 @@ from tree_version_element tve
        join tree_version tv on tve.tree_version_id = tv.id and tv.published = false
 where tve.tree_element_id = te.id;
 
+-- pre-emptive update of tree_element.display_html
+update tree_element te
+set display_html = '<data>' || n.full_name_html ||
+                   '<name-status class="' || ns.name|| '">, ' || ns.name || '</name-status> <citation>' || r.citation_html || '</citation></data>'
+from name n join name_status ns on n.name_status_id = ns.id,
+     instance i, reference r
+where te.name_id = n.id
+  and te.instance_id = i.id
+  and i.reference_id = r.id;
+
 -- clean up bhl_urls that are blank
 
 update instance set bhl_url = null where bhl_url = '';
