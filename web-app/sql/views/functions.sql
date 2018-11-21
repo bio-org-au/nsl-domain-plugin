@@ -382,17 +382,17 @@ language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<nom>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<tax>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
-                      '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type> by <citation>' ||
+                 THEN '<mis>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
+                      '</name-status><type>' || instance_type || '</type> by <citation>' ||
                       citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || ', <name-status class="' || name_status|| '">' || name_status ||
+                 THEN '<syn>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
                       '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
