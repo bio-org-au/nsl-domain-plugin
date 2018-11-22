@@ -15,10 +15,13 @@
 */
 package au.org.biodiversity.nsl
 
+import net.kaleidos.hibernate.usertype.JsonbMapType
+
 import java.sql.Timestamp
 
 class Name {
 
+    String uri
     String nameElement
     String statusSummary
     String verbatimRank
@@ -47,7 +50,10 @@ class Name {
 
     Author sanctioningAuthor
 
+    Integer publishedYear
+
     Boolean validRecord = false
+    Boolean changedCombination = false
 
     Long sourceDupOfId
     Name duplicateOf
@@ -61,6 +67,8 @@ class Name {
     Timestamp updatedAt
     String createdBy
     Timestamp createdAt
+
+    Map apniJson
 
     static hasMany = [
             instances     : Instance,
@@ -79,7 +87,9 @@ class Name {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
+        changedCombination defaultvalue: "false"
         orthVar defaultvalue: "false"
 
         nameElement index: 'Name_Name_Element_Index'
@@ -106,9 +116,12 @@ class Name {
 
         updatedAt sqlType: 'timestamp with time zone'
         createdAt sqlType: 'timestamp with time zone'
+
+        apniJson type: JsonbMapType
     }
 
     static constraints = {
+        uri nullable: true
         nameElement nullable: true
         statusSummary nullable: true, maxSize: 50
         updatedBy maxSize: 50
@@ -132,6 +145,8 @@ class Name {
         secondParent nullable: true
         family nullable: true
         verbatimRank nullable: true, maxSize: 50
+        apniJson nullable: true
+        publishedYear nullable: true, max: 2500, min: 1700
     }
 
     @Override

@@ -30,6 +30,8 @@ alter table name_type add constraint nt_unique_name unique (name_group_id, name)
 alter table name_status drop constraint if exists ns_unique_name;
 alter table name_status add constraint ns_unique_name unique (name_group_id, name);
 
+alter table name add constraint published_year_limits check (published_year > 1700 and published_year < 2500);
+
 -- pg_trgm indexs for like and regex queries NSL-1773
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX name_lower_full_name_gin_trgm
@@ -50,4 +52,4 @@ CREATE INDEX tree_synonyms_index
 ALTER TABLE tree
   ADD CONSTRAINT draft_not_current CHECK (current_tree_version_id <> default_draft_tree_version_id);
 --
-INSERT INTO db_version (id, version) VALUES (1, 27);
+INSERT INTO db_version (id, version) VALUES (1, 28);

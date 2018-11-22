@@ -244,7 +244,11 @@ Add auditing support to the given table. Row-level changes will be logged with f
 $body$;
 
 -- set up triggers using the following selects after import
+-- select * from information_schema.triggers;
+--
 -- select audit.audit_table('author');
 -- select audit.audit_table('instance');
 -- select audit.audit_table('name');
 -- select audit.audit_table('reference');
+-- select audit.audit_table('instance_note');
+-- select audit.audit_table('comment');

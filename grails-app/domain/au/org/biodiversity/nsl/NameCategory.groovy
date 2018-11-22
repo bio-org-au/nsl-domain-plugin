@@ -25,6 +25,21 @@ class NameCategory {
     String rdfId
     String descriptionHtml
 
+    Integer maxParentsAllowed
+    Integer minParentsRequired
+    String parent1HelpText
+    String parent2HelpText
+    Boolean requiresFamily = false
+    Boolean requiresHigherRankedParent = false
+    Boolean requiresNameElement = false
+    Boolean takesAuthorOnly = false
+    Boolean takesAuthors = false
+    Boolean takesCultivarScopedParent = false
+    Boolean takesHybridScopedParent = false
+    Boolean takesNameElement = false
+    Boolean takesVerbatimRank = false
+    Boolean takesRank = false
+
     static hasMany = [nameTypes: NameType]
 
     static mapping = {
@@ -34,6 +49,20 @@ class NameCategory {
         version column: 'lock_version', defaultValue: "0"
         sortOrder defaultValue: "0"
         descriptionHtml sqlType: 'text'
+        maxParentsAllowed defaultValue: 0
+        minParentsRequired defaultValue: 0
+        parent1HelpText sqlType: 'text', column: 'parent_1_help_text'
+        parent2HelpText sqlType: 'text', column: 'parent_2_help_text'
+        requiresFamily defaultValue: false
+        requiresHigherRankedParent defaultValue: false
+        requiresNameElement defaultValue: false
+        takesAuthorOnly defaultValue: false
+        takesAuthors defaultValue: false
+        takesCultivarScopedParent defaultValue: false
+        takesHybridScopedParent defaultValue: false
+        takesNameElement defaultValue: false
+        takesVerbatimRank defaultValue: false
+        takesRank defaultValue: false
     }
 
     static constraints = {
@@ -41,5 +70,7 @@ class NameCategory {
         sortOrder min: 0, max: 500
         rdfId maxSize: 50, nullable: true
         descriptionHtml nullable: true
+        parent1HelpText nullable: true
+        parent2HelpText nullable: true
     }
 }

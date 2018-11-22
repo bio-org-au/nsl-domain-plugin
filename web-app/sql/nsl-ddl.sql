@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -144,7 +144,13 @@
         drop constraint if exists FK_dm9y4p9xpsc8m7vljbohubl7x;
 
     alter table if exists resource 
+        drop constraint if exists FK_i2tgkebwedao7dlbjcrnvvtrv;
+
+    alter table if exists resource 
         drop constraint if exists FK_l76e0lo0edcngyyqwkmkgywj9;
+
+    alter table if exists resource_type 
+        drop constraint if exists FK_6nxjoae1hvplngbvpo0k57jjt;
 
     alter table if exists tree 
         drop constraint if exists FK_svg2ee45qvpomoer2otdc5oyc;
@@ -196,6 +202,8 @@
 
     drop table if exists language cascade;
 
+    drop table if exists media cascade;
+
     drop table if exists name cascade;
 
     drop table if exists name_category cascade;
@@ -223,6 +231,8 @@
     drop table if exists reference cascade;
 
     drop table if exists resource cascade;
+
+    drop table if exists resource_type cascade;
 
     drop table if exists shard_config cascade;
 
@@ -260,6 +270,7 @@
         source_system varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(255) not null,
+        uri text,
         valid_record boolean default false not null,
         primary key (id)
     );
@@ -340,6 +351,7 @@
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
         bhl_url varchar(4000),
+        cached_synonymy_html text,
         cited_by_id int8,
         cites_id int8,
         created_at timestamp with time zone not null,
@@ -358,6 +370,7 @@
         source_system varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(1000) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_name_string varchar(255),
         primary key (id)
@@ -392,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -433,11 +446,23 @@
         primary key (id)
     );
 
+    create table media (
+        id int8 default nextval('hibernate_sequence') not null,
+        version int8 not null,
+        data bytea not null,
+        description text not null,
+        file_name text not null,
+        mime_type text not null,
+        primary key (id)
+    );
+
     create table name (
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
+        apni_json jsonb,
         author_id int8,
         base_author_id int8,
+        changed_combination boolean default false not null,
         created_at timestamp with time zone not null,
         created_by varchar(50) not null,
         duplicate_of_id int8,
@@ -454,6 +479,7 @@
         namespace_id int8 not null,
         orth_var boolean default false not null,
         parent_id int8,
+        published_year int4,
         sanctioning_author_id int8,
         second_parent_id int8,
         simple_name varchar(250),
@@ -466,6 +492,7 @@
         status_summary varchar(50),
         updated_at timestamp with time zone not null,
         updated_by varchar(50) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_rank varchar(50),
         primary key (id)
@@ -475,9 +502,23 @@
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
         description_html text,
+        max_parents_allowed int4 not null,
+        min_parents_required int4 not null,
         name varchar(50) not null,
+        parent_1_help_text text,
+        parent_2_help_text text,
         rdf_id varchar(50),
+        requires_family boolean default false not null,
+        requires_higher_ranked_parent boolean default false not null,
+        requires_name_element boolean default false not null,
         sort_order int4 default 0 not null,
+        takes_author_only boolean default false not null,
+        takes_authors boolean default false not null,
+        takes_cultivar_scoped_parent boolean default false not null,
+        takes_hybrid_scoped_parent boolean default false not null,
+        takes_name_element boolean default false not null,
+        takes_rank boolean default false not null,
+        takes_verbatim_rank boolean default false not null,
         primary key (id)
     );
 
@@ -633,6 +674,7 @@
         tl2 varchar(30),
         updated_at timestamp with time zone not null,
         updated_by varchar(1000) not null,
+        uri text,
         valid_record boolean default false not null,
         verbatim_author varchar(1000),
         verbatim_citation varchar(2000),
@@ -648,9 +690,23 @@
         created_at timestamp with time zone not null,
         created_by varchar(50) not null,
         path varchar(2400) not null,
+        resource_type_id int8 not null,
         site_id int8 not null,
         updated_at timestamp with time zone not null,
         updated_by varchar(50) not null,
+        primary key (id)
+    );
+
+    create table resource_type (
+        id int8 default nextval('nsl_global_seq') not null,
+        lock_version int8 default 0 not null,
+        css_icon text,
+        deprecated boolean default false not null,
+        description text not null,
+        display boolean default false not null,
+        media_icon_id int8,
+        name text not null,
+        rdf_id varchar(50),
         primary key (id)
     );
 
@@ -733,6 +789,7 @@
     create table tree_version_element (
         element_link Text not null,
         depth int4 not null,
+        merge_conflict boolean default false not null,
         name_path Text not null,
         parent_id Text,
         taxon_id int8 not null,
@@ -1011,14 +1068,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1166,9 +1223,19 @@
         references ref_type;
 
     alter table if exists resource 
+        add constraint FK_i2tgkebwedao7dlbjcrnvvtrv 
+        foreign key (resource_type_id) 
+        references resource_type;
+
+    alter table if exists resource 
         add constraint FK_l76e0lo0edcngyyqwkmkgywj9 
         foreign key (site_id) 
         references site;
+
+    alter table if exists resource_type 
+        add constraint FK_6nxjoae1hvplngbvpo0k57jjt 
+        foreign key (media_icon_id) 
+        references media;
 
     alter table if exists tree 
         add constraint FK_svg2ee45qvpomoer2otdc5oyc 
@@ -1461,54 +1528,427 @@ Add auditing support to the given table. Row-level changes will be logged with f
 $body$;
 
 -- set up triggers using the following selects after import
+-- select * from information_schema.triggers;
+--
 -- select audit.audit_table('author');
 -- select audit.audit_table('instance');
 -- select audit.audit_table('name');
 -- select audit.audit_table('reference');
-
+-- select audit.audit_table('instance_note');
+-- select audit.audit_table('comment');
 -- functions.sql
-drop function if exists synonym_as_html( bigint );
+-- NSL-752 NSL-2894
+-- functions to get ordered output as needed by the APNI format
+
+-- find basionym
+drop function if exists basionym(bigint);
+create function basionym(nameid bigint)
+  returns bigint
+language sql
+as $$
+select coalesce(
+         (select coalesce(bas_name.id, primary_inst.name_id)
+          from instance primary_inst
+                 left join instance bas_inst
+                 join name bas_name on bas_inst.name_id = bas_name.id
+                 join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name in ('basionym','replaced synonym')
+                 join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
+                 join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
+          where primary_inst.name_id = nameid
+          limit 1), nameid);
+$$;
+
+-- Find earliest local instance for a name.
+drop function if exists first_ref(bigint);
+create function first_ref(nameid bigint)
+  returns table(group_id bigint, group_name text, group_year integer)
+language sql
+as $$
+select n.id group_id, n.sort_name group_name, min(r.year)
+from name n
+       join instance i
+       join reference r on i.reference_id = r.id
+         on n.id  = i.name_id
+where n.id = nameid
+group by n.id, sort_name
+$$;
+
+-- find the name an orth var or alt name is of
+
+drop function if exists orth_or_alt_of(bigint);
+create function orth_or_alt_of(nameid bigint)
+  returns bigint
+language sql
+as $$
+select coalesce((select alt_of_inst.name_id
+                 from name n
+                        join name_status ns on n.name_status_id = ns.id
+                        join instance alt_inst on n.id = alt_inst.name_id
+                        join instance_type alt_it on alt_inst.instance_type_id = alt_it.id and
+                                                     alt_it.name in ('orthographic variant', 'alternative name')
+                        join instance alt_of_inst on alt_of_inst.id = alt_inst.cited_by_id
+                 where n.id = nameid
+                   and ns.name ~ '(orth. var.|nom. alt.)' limit 1), nameid) id
+$$;
+
+-- get the synonyms of a name in flora order for apni
+
+drop function if exists apni_ordered_nom_synonymy(bigint);
+create function apni_ordered_nom_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_uri     text,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                name_uri         text,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
+                misapplied       boolean,
+                ref_id           bigint)
+language sql
+as $$
+select i.id,
+       i.uri,
+       it.has_label as instance_type,
+       it.id        as instance_type_id,
+       n.id         as name_id,
+       n.uri,
+       n.full_name,
+       n.full_name_html,
+       ns.name      as name_status,
+       r.citation,
+       r.citation_html,
+       r.year,
+       cites.page,
+       n.sort_name,
+       false,
+       r.id
+from instance i
+       join instance_type it on i.instance_type_id = it.id and it.nomenclatural
+       join name n on i.name_id = n.id
+       join name_status ns on n.name_status_id = ns.id
+       left outer join instance cites on i.cites_id = cites.id
+       left outer join reference r on cites.reference_id = r.id
+where i.cited_by_id = instanceid
+order by (it.sort_order < 20) desc,
+         it.nomenclatural desc,
+         r.year,
+         n.sort_name,
+         it.pro_parte,
+         it.doubtful,
+         cites.page,
+         cites.id;
+$$;
+
+drop function if exists apni_ordered_other_synonymy(bigint);
+create function apni_ordered_other_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_uri     text,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                name_uri         text,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
+                group_name       text,
+                group_head       boolean,
+                group_year       integer,
+                misapplied       boolean,
+                ref_id           bigint,
+                og_id            bigint,
+                og_head          boolean,
+                og_name text,
+                og_year integer)
+language sql
+as $$
+select i.id                            as instance_id,
+       i.uri                           as instance_uri,
+       it.has_label                    as instance_type,
+       it.id                           as instance_type_id,
+       n.id                            as name_id,
+       n.uri                           as name_uri,
+       n.full_name,
+       n.full_name_html,
+       ns.name                         as name_status,
+       r.citation,
+       r.citation_html,
+       r.year,
+       cites.page,
+       n.sort_name,
+       ng.group_name                   as group_name,
+       ng.group_id = n.id              as group_head,
+       coalesce(ng.group_year, r.year) as group_year,
+       it.misapplied,
+       r.id                            as ref_id,
+       og_id                           as og_id,
+       og_id = n.id                    as og_head,
+       coalesce(ogn.sort_name, n.sort_name) as og_name,
+       coalesce(ogr.year,r.year)       as og_year
+from instance i
+       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
+       join name n on i.name_id = n.id
+       join name_type nt on n.name_type_id = nt.id
+       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og_id on true
+       left outer join name ogn on ogn.id = og_id and not og_id = n.id
+       left outer join instance ogi
+       join reference ogr on ogr.id = ogi.reference_id
+         on ogi.name_id = og_id and ogi.id = i.cited_by_id and not og_id = n.id
+       left outer join first_ref(basionym(og_id)) ng on true
+       join name_status ns on n.name_status_id = ns.id
+       left outer join instance cites on i.cites_id = cites.id
+       left outer join reference r on cites.reference_id = r.id
+where i.cited_by_id = instanceid
+order by (it.sort_order < 20) desc,
+         it.taxonomic desc,
+         group_year,
+         group_name,
+         group_head desc,
+         og_year,
+         og_name,
+         og_head desc,
+         r.year,
+         n.sort_name,
+         it.pro_parte,
+         it.misapplied desc,
+         it.doubtful,
+         cites.page,
+         cites.id;
+$$;
+
+drop function if exists apni_ordered_synonymy(bigint);
+
+create function apni_ordered_synonymy(instanceid bigint)
+  returns TABLE(instance_id      bigint,
+                instance_uri     text,
+                instance_type    text,
+                instance_type_id bigint,
+                name_id          bigint,
+                name_uri         text,
+                full_name        text,
+                full_name_html   text,
+                name_status      text,
+                citation         text,
+                citation_html    text,
+                year             int,
+                page             text,
+                sort_name        text,
+                misapplied       boolean,
+                ref_id           bigint)
+language sql
+as $$
+
+select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
+       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+from apni_ordered_nom_synonymy(instanceid)
+union all
+select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
+       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+from apni_ordered_other_synonymy(instanceid)
+$$;
+
+-- apni ordered synonymy as a text output
+
+drop function if exists apni_ordered_synonymy_text(bigint);
+create function apni_ordered_synonymy_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' ||
+                  syn.instance_type ||
+                  ': ' ||
+                  syn.full_name ||
+                  (case
+                     when syn.name_status = 'legitimate' then ''
+                     when syn.name_status = '[n/a]' then ''
+                     else ' ' || syn.name_status end) ||
+                  (case
+                     when syn.misapplied then syn.citation
+                     else '' end), E'\n') || E'\n'
+from apni_ordered_synonymy(instanceid) syn;
+$$;
+
+-- apni ordered synonymy as a jsonb output
+drop function if exists apni_ordered_synonymy_jsonb(bigint);
+create function apni_ordered_synonymy_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'instance_id', syn.instance_id,
+           'instance_uri', syn.instance_uri,
+           'instance_type', syn.instance_type,
+           'name_uri', syn.name_uri,
+           'full_name_html', syn.full_name_html,
+           'name_status', syn.name_status,
+           'misapplied', syn.misapplied,
+           'citation_html', syn.citation_html
+             )
+           )
+from apni_ordered_synonymy(instanceid) syn;
+$$;
+
+-- if this is a relationship instance what are we a synonym of
+
+drop function if exists apni_synonym(bigint);
+create function apni_synonym(instanceid bigint)
+  returns TABLE(instance_id    bigint,
+                instance_uri   text,
+                instance_type  text,
+                instance_type_id bigint,
+                name_id        bigint,
+                name_uri       text,
+                full_name      text,
+                full_name_html text,
+                name_status    text,
+                citation       text,
+                citation_html  text,
+                year           int,
+                page           text,
+                misapplied     boolean,
+                sort_name      text)
+language sql
+as $$
+select i.id,
+       i.uri,
+       it.of_label as instance_type,
+       it.id       as instance_type_id,
+       n.id        as name_id,
+       n.uri,
+       n.full_name,
+       n.full_name_html,
+       ns.name,
+       r.citation,
+       r.citation_html,
+       r.year,
+       i.page,
+       it.misapplied,
+       n.sort_name
+from instance i
+       join instance_type it on i.instance_type_id = it.id
+       join instance cites on i.cited_by_id = cites.id
+       join name n on cites.name_id = n.id
+       join name_status ns on n.name_status_id = ns.id
+       join reference r on i.reference_id = r.id
+where i.id = instanceid
+  and it.relationship;
+$$;
+
+-- if this is a relationship instance what are we a synonym of as text
+drop function if exists apni_synonym_text(bigint);
+create function apni_synonym_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' ||
+                  syn.instance_type ||
+                  ': ' ||
+                  syn.full_name ||
+                  (case
+                     when syn.name_status = 'legitimate' then ''
+                     when syn.name_status = '[n/a]' then ''
+                     else ' ' || syn.name_status end) ||
+                  (case
+                     when syn.misapplied
+                             then 'by ' || syn.citation
+                     else '' end), E'\n') || E'\n'
+from apni_synonym(instanceid) syn;
+$$;
+
+-- if this is a relationship instance what are we a synonym of as jsonb
+drop function if exists apni_synonym_jsonb(bigint);
+create function apni_synonym_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'instance_id', syn.instance_id,
+           'instance_uri', syn.instance_uri,
+           'instance_type', syn.instance_type,
+           'name_uri', syn.name_uri,
+           'full_name_html', syn.full_name_html,
+           'name_status', syn.name_status,
+           'misapplied', syn.misapplied,
+           'citation_html', syn.citation_html
+             )
+           )
+from apni_synonym(instanceid) syn;
+$$;
+
+-- apni ordered references for a name
+
+drop function if exists apni_ordered_references(bigint);
+create function apni_ordered_references(nameid bigint)
+  returns TABLE(instance_id   bigint,
+                instance_uri text,
+                instance_type text,
+                citation      text,
+                citation_html text,
+                year          int,
+                pages         text,
+                page          text)
+language sql
+as $$
+select i.id, i.uri, it.name, r.citation, r.citation_html, r.year, r.pages, coalesce(i.page, citedby.page, '-')
+from instance i
+       join reference r on i.reference_id = r.id
+       join instance_type it on i.instance_type_id = it.id
+       left outer join instance citedby on i.cited_by_id = citedby.id
+where i.name_id = nameid
+group by r.id, i.id, it.id, citedby.id
+order by r.year, it.protologue, it.primary_instance, r.citation, r.pages, i.page, r.id;
+$$;
+
+-- get the synonyms of an instance as html to store in the tree in apni synonymy order
+
+drop function if exists synonym_as_html(bigint);
 create function synonym_as_html(instanceid bigint)
   returns TABLE(html text)
 language sql
 as $$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || synonym.full_name_html || ' <type>' || it.name || '</type></nom>'
+                 THEN '<nom>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
+                      '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || synonym.full_name_html || ' <type>' || it.name || '</type></tax>'
+                 THEN '<tax>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
+                      '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || synonym.full_name_html || ' <type>' || it.name || '</type> by <citation>' ||
-                      cites_ref.citation_html
-                        ||
-                      '</citation></mis>'
+                 THEN '<mis>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
+                      '</name-status><type>' || instance_type || '</type> by <citation>' ||
+                      citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || synonym.full_name_html || ' <type>' || it.name || '</type></syn>'
+                 THEN '<syn>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
+                      '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
          ELSE ''
            END
-FROM Instance i,
-     Instance syn_inst
-       JOIN instance_type it ON syn_inst.instance_type_id = it.id
-       JOIN instance cites_inst ON syn_inst.cites_id = cites_inst.id
-       JOIN reference cites_ref ON cites_inst.reference_id = cites_ref.id
-    ,
-     NAME synonym
-WHERE syn_inst.cited_by_id = i.id
-  AND i.id = instanceid
-  AND synonym.id = syn_inst.name_id
-ORDER BY it.nomenclatural DESC, it.taxonomic DESC, it.misapplied DESC, synonym.simple_name, cites_ref.year ASC,
-         cites_inst.id ASC, synonym.id ASC;
+FROM apni_ordered_synonymy(instanceid)
+       join instance_type it on instance_type_id = it.id
 $$;
 
-DROP FUNCTION IF EXISTS synonyms_as_html( BIGINT );
-CREATE FUNCTION synonyms_as_html(instance_id BIGINT)
-  RETURNS TEXT
-LANGUAGE SQL
-AS $$
+drop function if exists synonyms_as_html(bigint);
+create function synonyms_as_html(instance_id bigint) returns text
+language sql
+as $$
 SELECT '<synonyms>' || string_agg(html, '') || '</synonyms>'
 FROM synonym_as_html(instance_id) AS html;
-$$;
+$$
+;
 
+-- build JSONB representation of synonyms inside a shard TODO fix links
 DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)
   RETURNS JSONB
@@ -1550,6 +1990,242 @@ WHERE i.id = instance_id
   AND synonym.id = syn_inst.name_id;
 $$;
 
+-- instance notes
+
+drop function if exists type_notes(bigint);
+create function type_notes(instanceid bigint)
+  returns TABLE(note_key text,
+                note     text)
+language sql
+as $$
+select k.name, nt.value
+from instance_note nt
+       join instance_note_key k on nt.instance_note_key_id = k.id
+where nt.instance_id = instanceid
+  and k.name ilike '%type'
+$$;
+
+drop function if exists type_notes_text(bigint);
+create function type_notes_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
+from type_notes(instanceid) as nt
+$$;
+
+drop function if exists type_notes_jsonb(bigint);
+create function type_notes_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'note_key', nt.note_key,
+           'note_value', nt.note
+             )
+           )
+from type_notes(instanceid) as nt
+$$;
+
+drop function if exists non_type_notes(bigint);
+create function non_type_notes(instanceid bigint)
+  returns TABLE(note_key text,
+                note     text)
+language sql
+as $$
+select k.name, nt.value
+from instance_note nt
+       join instance_note_key k on nt.instance_note_key_id = k.id
+where nt.instance_id = instanceid
+  and k.name not ilike '%type'
+$$;
+
+drop function if exists non_type_notes_text(bigint);
+create function non_type_notes_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select string_agg('  ' || nt.note_key || ': ' || nt.note || E'\n', E'\n')
+from non_type_notes(instanceid) as nt
+$$;
+
+drop function if exists non_type_notes_jsonb(bigint);
+create function non_type_notes_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'note_key', nt.note_key,
+           'note_value', nt.note
+             )
+           )
+from non_type_notes(instanceid) as nt
+$$;
+
+-- profile stuff
+drop function if exists latest_accepted_profile(bigint);
+create function latest_accepted_profile(instanceid bigint)
+  returns table(comment_key text, comment_value text, dist_key text, dist_value text)
+language sql
+as $$
+select config ->> 'comment_key'                                 as comment_key,
+       (profile -> (config ->> 'comment_key')) ->> 'value'      as comment_value,
+       config ->> 'distribution_key'                            as dist_key,
+       (profile -> (config ->> 'distribution_key')) ->> 'value' as dist_value
+from tree_version_element tve
+       join tree_element te on tve.tree_element_id = te.id
+       join tree_version tv on tve.tree_version_id = tv.id and tv.published
+       join tree t on tv.tree_id = t.id and t.accepted_tree
+where te.instance_id = instanceid
+order by tv.id desc
+limit 1
+$$;
+
+drop function if exists latest_accepted_profile_jsonb(bigint);
+create function latest_accepted_profile_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_build_object(
+         'comment_key', comment_key,
+         'comment_value', comment_value,
+         'dist_key', dist_key,
+         'dist_value', dist_value
+           )
+from latest_accepted_profile(instanceid)
+$$;
+
+drop function if exists latest_accepted_profile_text(bigint);
+create function latest_accepted_profile_text(instanceid bigint)
+  returns text
+language sql
+as $$
+select '  ' ||
+       case
+         when comment_value is not null
+                 then comment_key || ': ' || comment_value
+         else ''
+           end ||
+       case
+         when dist_value is not null
+                 then dist_key || ': ' || dist_value
+         else ''
+           end ||
+       E'\n'
+from latest_accepted_profile(instanceid)
+$$;
+
+-- resources
+
+drop function if exists instance_resources(bigint);
+create function instance_resources(instanceid bigint)
+  returns table(name text, description text, url text, css_icon text, media_icon text)
+language sql
+as $$
+select rd.name, rd.description, s.url || '/' || r.path, rd.css_icon, 'media/' || m.id
+from instance_resources ir
+       join resource r on ir.resource_id = r.id
+       join site s on r.site_id = s.id
+       join resource_type rd on r.resource_type_id = rd.id
+      left outer join media m on m.id = rd.media_icon_id
+    where ir.instance_id = instanceid
+$$;
+
+drop function if exists instance_resources_jsonb(bigint);
+create function instance_resources_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'type', ir.name,
+           'description', ir.description,
+           'url', ir.url,
+           'css_icon', ir.css_icon,
+           'media_icon', ir.media_icon
+         )
+       )
+from instance_resources(instanceid) ir
+$$;
+
+-- latest tree version this instance has been on
+drop function if exists instance_on_accepted_tree(bigint);
+create function instance_on_accepted_tree(instanceId bigint)
+  returns table(current boolean, excluded boolean, element_link text, tree_name text)
+language sql
+as $$
+select t.current_tree_version_id = tv.id, te.excluded, tve.element_link, t.name
+from tree_element te
+       join tree_version_element tve on te.id = tve.tree_element_id
+       join tree_version tv on tve.tree_version_id = tv.id
+       join tree t on tv.tree_id = t.id and t.accepted_tree
+where te.instance_id = instanceId
+  and tv.published
+order by tve.tree_version_id desc
+limit 1;
+$$;
+
+drop function if exists instance_on_accepted_tree_jsonb(bigint);
+create function instance_on_accepted_tree_jsonb(instanceid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+             'current', tve.current,
+             'excluded', tve.excluded,
+             'element_link', tve.element_link,
+             'tree_name', tve.tree_name
+             )
+           )
+from instance_on_accepted_tree(instanceid) tve
+$$;
+
+
+-- apni details as text output
+drop function if exists apni_detail_text(bigint);
+create function apni_detail_text(nameid bigint)
+  returns text
+language sql
+as $$
+select string_agg(' ' ||
+                  refs.citation ||
+                  ': ' ||
+                  refs.page || E'\n' ||
+                  coalesce(type_notes_text(refs.instance_id), '') ||
+                  coalesce(apni_ordered_synonymy_text(refs.instance_id), apni_synonym_text(refs.instance_id), '') ||
+                  coalesce(non_type_notes_text(refs.instance_id), '') ||
+                  coalesce(latest_accepted_profile_text(refs.instance_id), ''),
+                  E'\n')
+from apni_ordered_references(nameid) refs
+$$;
+
+-- apni details as jsonb output
+drop function if exists apni_detail_jsonb(bigint);
+create function apni_detail_jsonb(nameid bigint)
+  returns jsonb
+language sql
+as $$
+select jsonb_agg(
+         jsonb_build_object(
+           'ref_citation_html', refs.citation_html,
+           'ref_citation', refs.citation,
+           'instance_id', refs.instance_id,
+           'instance_uri', refs.instance_uri,
+           'instance_type', refs.instance_type,
+           'page', refs.page,
+           'type_notes', coalesce(type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
+           'synonyms', coalesce(apni_ordered_synonymy_jsonb(refs.instance_id), apni_synonym_jsonb(refs.instance_id), '[]' :: jsonb),
+           'non_type_notes', coalesce(non_type_notes_jsonb(refs.instance_id), '{}' :: jsonb),
+           'profile', coalesce(latest_accepted_profile_jsonb(refs.instance_id), '{}' :: jsonb),
+           'resources', coalesce(instance_resources_jsonb(refs.instance_id), '{}' :: jsonb),
+           'tree', coalesce(instance_on_accepted_tree_jsonb(refs.instance_id), '{}' :: jsonb)
+         )
+       )
+from apni_ordered_references(nameid) refs
+$$;
 -- other-setup.sql
 --other setup
 ALTER TABLE instance
@@ -1583,6 +2259,8 @@ alter table name_type add constraint nt_unique_name unique (name_group_id, name)
 alter table name_status drop constraint if exists ns_unique_name;
 alter table name_status add constraint ns_unique_name unique (name_group_id, name);
 
+alter table name add constraint published_year_limits check (published_year > 1700 and published_year < 2500);
+
 -- pg_trgm indexs for like and regex queries NSL-1773
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX name_lower_full_name_gin_trgm
@@ -1603,7 +2281,7 @@ CREATE INDEX tree_synonyms_index
 ALTER TABLE tree
   ADD CONSTRAINT draft_not_current CHECK (current_tree_version_id <> default_draft_tree_version_id);
 --
-INSERT INTO db_version (id, version) VALUES (1, 27);
+INSERT INTO db_version (id, version) VALUES (1, 28);
 
 -- populate-lookup-tables.sql
 -- Populate lookup tables (currently botanical)
@@ -2195,37 +2873,6 @@ INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional,
 INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional, description_html, rdf_id) VALUES (nextval('nsl_global_seq'), 1, 'Unknown', null, true, '(description of <b>Unknown</b>)', 'unknown');
 UPDATE public.ref_type SET parent_id = id WHERE name = 'Unknown'; --self parent
 
-
--- populate-shardconfig.sql
--- default APNI values for shard config - please change for new shards
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'config rules', 'All lower case names, space separated, follow the pattern hierachy');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name space', 'APNI');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name tree label', 'APNI');
-INSERT INTO public.shard_config (id, name, value, deprecated) VALUES (nextval('hibernate_sequence'), 'classification tree label', 'APC', true);
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'APNI description', 'The Australian Plant Name Index (APNI) is a tool for the botanical community that deals with plant names and their usage in the scientific literature, whether as a current name or synonym. APNI does not recommend any particular taxonomy or nomenclature. For a listing of currently accepted scientific names for the Australian vascular flora, please use the Australian Plant Census (APC) link above.');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'APC description', 'The Australian Plant Census (APC) is a list of the accepted scientific names for the Australian vascular flora, ferns, gymnosperms, hornworts and liverworts, both native and introduced, and includes synonyms and misapplications for these names. The APC covers all published scientific plant names used in an Australian context in the taxonomic literature, but excludes taxa known only from cultivation in Australia. The taxonomy and nomenclature adopted for the APC are endorsed by the Council of Heads of Australasian Herbaria (CHAH).');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'menu label', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'banner text', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree banner text', 'Australian Plant Census');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name label', 'APNI');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree description html', '<p>The Australian Plant Census (APC) is a nationally-accepted taxonomy for the Australian flora. APC covers all published scientific plant names used in an Australian context in the taxonomic literature, but excludes taxa known only from cultivation in Australia. The taxonomy and nomenclature adopted for the APC are endorsed by the Council of Heads of Australasian Herbaria (CHAH). </p><p>Information available from APC includes:</p><ul class="discs"> <li>Accepted scientific name and author abbreviation(s);</li> <li>Reference to the taxonomic and nomenclatural concept adopted for APC;</li>  <li>Synonym(s) and misapplications;</li> <li>State distribution;</li><li>Relevant comments and notes</li></ul><p>APC is currently maintained within the Centre for Australian National Biodiversity Research with staff, resources and financial support from the Australian National Herbarium, Australian National Botanic Gardens and the Australian Biological Resources Study. The CANBR, ANBG and ABRS collaborate to further the updating and delivery of APNI and APC.</p>');
-INSERT INTO public.shard_config (id, name, value, deprecated) VALUES (nextval('hibernate_sequence'), 'tree label', 'APC', true);
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree label text', 'Australian Plant Census');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'page title', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree search help text html', 'The Australian Plant Census (APC) provides a listing of currently accepted names for the Australian native and introduced flora, including angiosperms, ferns, gymnosperms, hornworts and liverworts. APC does not de full details of the usage of these names in the taxonomic literature.   For comprehensive bibliographic information, see the <a href="/names">Australian Plant Name Index database (APNI)</a>.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'services path name element', 'apni');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name search help text html', '<p>The Australian Plant Name Index (APNI) is a resource for the botanical community that deals with vascular plant names and their usage in the scientific literature, whether as a current name or synonym.  Names of cultivars derived from the Australian flora are also included.</p><p>APNI does not recommend any particular taxonomy or nomenclature.</p><p>For a listing of currently accepted scientific names for the Australian vascular flora, use the <a href="/taxonomy/accepted">Australian Plant Census (APC)</a>.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'services path tree element', 'apc');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name link title', 'Vascular Plant Names in the Australian Plant Names Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'menu link title', 'Vascular Plants');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name label text', 'Australian Plant Name Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name banner text', 'Australian Plant Name Index');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'tree link title', 'Australian Plant Census Taxonomy');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'name description html', '<p>The Australian Plant Name Index (APNI) is a national resource providing information on the names of native and naturalised Australian plants and the usage of these names in the scientific literature, whether as a current name or synonym. APNI includes data for angiosperms, ferns, gymnosperms, hornworts, and liverworts. It also includes names for cultivars derived from the Australian flora. APNI does not recommend any particular taxonomy or nomenclature. For a listing of currently accepted scientific names for the Australian vascular flora, see the Australian Plant Census (APC). </p> Information available from APNI includes:<ul class="discs"><li>Scientific plant names;<li>Author details;</li><li>Original publication details (protologue) with links to the publication when available;</li><li>Subsequent usage of the name in the scientific literature (in an Australian context);</li><li>Typification details;</li><li>Icons indicating which, if any, is the currently accepted concept in the Australian Plant Census (APC);</li><li>State distribution (from APC); </li><li>Relevant comments and notes; and </li><li>Links to other information where available. </li></ul><p>APNI is currently maintained within the Centre for Australian National Biodiversity Research with staff, resources and financial support from the Australian National Herbarium, Australian National Botanic Gardens and the Australian Biological Resources Study. The CANBR, ANBG and ABRS collaborate to further the updating and delivery of APNI and APC.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'banner image', 'apni-banner.png');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'card image', 'apni-vert-200.png');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'description html', '<p>This section of the National Species List infrastructure delivers names and taxonomies for flowering plants, ferns, gymnosperms, hornworts, and liverworts.The data comprise names, bibliographic information, and taxonomic concepts for plants that are either native to or naturalised in Australia.</p><p>The Australian Plant Name Index (APNI) provides names and bibliographic information.</p><p>The Australian Plant Census (APC) provides a nationally-accepted taxonomy.</p>');
-INSERT INTO public.shard_config (id, name, value) VALUES (nextval('hibernate_sequence'), 'classification tree key', 'APC');
 
 -- populate-top-level-names.sql
 INSERT INTO public.author (id, lock_version, abbrev, created_at, created_by, date_range, duplicate_of_id, full_name, ipni_id,

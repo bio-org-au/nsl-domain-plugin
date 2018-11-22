@@ -19,6 +19,7 @@ import java.sql.Timestamp
 
 class Instance {
 
+    String uri
     String verbatimNameString
     String page
     String pageQualifier
@@ -44,6 +45,8 @@ class Instance {
     String createdBy
     Timestamp createdAt
 
+    String cachedSynonymyHtml  // cache for the current synonymyHtml used on a tree
+
     static hasMany = [
             instancesForCitedBy: Instance,
             instancesForCites  : Instance,
@@ -66,6 +69,7 @@ class Instance {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
         draft defaultvalue: "false"
 
@@ -83,9 +87,11 @@ class Instance {
         citedBy index: 'Instance_CitedBy_Index'
         updatedAt sqlType: 'timestamp with time zone'
         createdAt sqlType: 'timestamp with time zone'
+        cachedSynonymyHtml sqlType: 'text'
     }
 
     static constraints = {
+        uri nullable: true
         verbatimNameString nullable: true
         page nullable: true
         pageQualifier nullable: true
@@ -97,6 +103,7 @@ class Instance {
         sourceSystem nullable: true, maxSize: 50
         sourceIdString nullable: true, maxSize: 100
         sourceId nullable: true
+        cachedSynonymyHtml nullable: true
     }
 
     @Override

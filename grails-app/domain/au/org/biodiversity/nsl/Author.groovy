@@ -19,6 +19,7 @@ import java.sql.Timestamp
 
 class Author {
 
+    String uri
     String abbrev
     String name
     String fullName
@@ -62,6 +63,7 @@ class Author {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        uri sqlType: 'text'
         validRecord defaultvalue: "false"
 
         sourceId index: 'Auth_Source_Index'
@@ -77,6 +79,7 @@ class Author {
     }
 
     static constraints = {
+        uri nullable: true
         abbrev nullable: true, maxSize: 100, unique: true
         name nullable: true, maxSize: 1000
         fullName nullable: true

@@ -1,5 +1,200 @@
+--drop resource and media tables and rebuild
+alter table resource drop column if exists resource_type_id;
+alter table name drop column if exists apni_json;
+alter table author drop column if exists uri;
+alter table instance drop column if exists uri;
+alter table instance drop column if exists cached_synonymy_html;
+alter table name drop column if exists uri;
+alter table name drop column if exists published_year;
+alter table reference drop column if exists uri;
+alter table tree_version_element drop column if exists merge_conflict;
+drop table if exists resource_type;
+drop table if exists media;
+
+-- delete existing resources as they'll be re-created correctly where needed
+delete from instance_resources;
+delete from resource;
+
+-- create new resource description and media tables
+create table media (
+  id int8 default nextval('hibernate_sequence') not null,
+  version int8 not null,
+  data bytea not null,
+  description text not null,
+  file_name text not null,
+  mime_type text not null,
+  primary key (id)
+);
+
+create table resource_type (
+  id int8 default nextval('nsl_global_seq') not null,
+  lock_version int8 default 0 not null,
+  css_icon text,
+  deprecated boolean default false not null,
+  description text not null,
+  display boolean default true not null,
+  media_icon_id int8,
+  name text not null,
+  rdf_id varchar(50),
+  primary key (id)
+);
+
+alter table resource add column resource_type_id int8 not null; -- there shouldn't be any yet
+
+alter table if exists resource
+  add constraint FK_i2tgkebwedao7dlbjcrnvvtrv
+  foreign key (resource_type_id)
+  references resource_type;
+
+alter table if exists resource_type
+  add constraint FK_6nxjoae1hvplngbvpo0k57jjt
+  foreign key (media_icon_id)
+  references media;
+
+-- add uri columns to author, instance,name and reference nullable for now.
+
+alter table author add column uri text;
+alter table instance add column uri text;
+alter table name add column uri text;
+alter table reference add column uri text;
+alter table tree_version_element add column merge_conflict boolean default false not null;
+
+-- alter table if exists author
+--   add constraint UK_rd7q78koyhufe1edfb2rgfrum  unique (uri);
+-- alter table if exists instance
+--   add constraint UK_bl9pesvdo9b3mp2qdna1koqc7  unique (uri);
+-- alter table if exists name
+--   add constraint UK_66rbixlxv32riosi9ob62m8h5  unique (uri);
+-- alter table if exists reference
+--   add constraint UK_nivlrafbqdoj0yie46ixithd3  unique (uri);
+
+-- add cached synonymy on instance
+alter table instance add column cached_synonymy_html text;
+
+-- NSL-3099 add changed_combination flag on name.
+alter table name add column changed_combination boolean default false not null;
+
+-- NSL-3101 add published_year to name to support iczn
+alter table name add column published_year int4;
+alter table name add constraint published_year_limits check (published_year > 0 and published_year < 2500);
+
+-- NSL-3065
+alter table name_category add column max_parents_allowed int4 default 0 not null;
+alter table name_category add column min_parents_required int4 default 0 not null;
+alter table name_category add column parent_1_help_text text;
+alter table name_category add column parent_2_help_text text;
+alter table name_category add column requires_family boolean default false not null;
+alter table name_category add column requires_higher_ranked_parent boolean default false not null;
+alter table name_category add column requires_name_element boolean default false not null;
+alter table name_category add column takes_author_only boolean default false not null;
+alter table name_category add column takes_authors boolean default false not null;
+alter table name_category add column takes_cultivar_scoped_parent boolean default false not null;
+alter table name_category add column takes_hybrid_scoped_parent boolean default false not null;
+alter table name_category add column takes_name_element boolean default false not null;
+alter table name_category add column takes_verbatim_rank boolean default false not null;
+alter table name_category add column takes_rank boolean default false not null;
+
+update name_category
+set sort_order = 50,
+    description_html = 'names entered and edited as cultivar names',
+    min_parents_required = 1,
+    max_parents_allowed = 1,
+    parent_1_help_text = 'cultivar - genus and below, or unranked if unranked',
+    takes_hybrid_scoped_parent = false,
+    requires_family = true,
+    takes_name_element = true,
+    takes_authors = false,
+    takes_author_only = false,
+    requires_name_element = true,
+    requires_higher_ranked_parent = false,
+    takes_cultivar_scoped_parent  = true,
+    takes_verbatim_rank = true,
+    takes_rank = true
+where name = 'cultivar';
+
+update name_category
+set sort_order = 10,
+    description_html = 'names entered and edited as scientific names',
+    min_parents_required = 1,
+    max_parents_allowed = 1,
+    parent_1_help_text = 'ordinary - restricted by rank, or unranked if unranked',
+    takes_hybrid_scoped_parent = false,
+    requires_family = true,
+    takes_name_element = true,
+    takes_authors = true,
+    takes_author_only = false,
+    requires_name_element = true,
+    requires_higher_ranked_parent = true,
+    takes_cultivar_scoped_parent  = false,
+    takes_verbatim_rank = true,
+    takes_rank = true
+where name = 'scientific';
+
+insert into name_category
+    (name,
+     sort_order,
+     description_html,
+     min_parents_required,
+     max_parents_allowed,
+     parent_1_help_text,
+     takes_hybrid_scoped_parent,
+     requires_family,
+     takes_name_element,
+     takes_authors,
+     takes_author_only,
+     requires_name_element,
+     requires_higher_ranked_parent,
+     parent_2_help_text,
+     takes_cultivar_scoped_parent ,
+     takes_verbatim_rank,
+     takes_rank)
+values
+       ('cultivar hybrid',60,'names entered and edited as cultivar hybrid names',2,2,'cultivar - genus and below, or unranked if unranked',false,true,true,false,false,true,false,'cultivar - genus and below, or unranked if unranked',true,true,true),
+       ('other',70,'names entered and edited as other names',0,0,'ordinary - restricted by rank, or unranked if unranked',false,false,true,false,false,true,false,null,true,true,false),
+       ('phrase name',20,'names entered and edited as scientific phrase names',1,1,'ordinary - restricted by rank, or unranked if unranked',false,true,true,false,true,false,false,null,false,false,true),
+       ('scientific hybrid formula',30,'names entered and edited as scientific hybrid formulae',2,2,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,'hybrid - species and below or unranked if unranked',false,true,true),
+       ('scientific hybrid formula unknown 2nd parent',40,'names entered and edited as scientific hybrid formulae with unknown 2nd parent',1,1,'hybrid - species and below or unranked if unranked',true,true,false,false,false,false,false,null,true,true,true)
+;
+
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[default]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[n/a]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = '[unknown]';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'acra';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'acra hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'candidatus';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'common';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'cultivar';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'cultivar hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'cultivar hybrid formula';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'graft/chimera';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'hybrid autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'hybrid formula parents known';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula unknown 2nd parent' ) where name_type.name = 'hybrid formula unknown 2nd parent';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'informal';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific hybrid formula' ) where name_type.name = 'intergrade';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'named hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'named hybrid autonym';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'pbr';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'pbr hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'phrase name' ) where name_type.name = 'phrase name';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'sanctioned';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'scientific' ) where name_type.name = 'scientific';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar' ) where name_type.name = 'trade';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'cultivar hybrid' ) where name_type.name = 'trade hybrid';
+update name_type set name_category_id = (select id from name_category where name_category.name = 'other' ) where name_type.name = 'vernacular';
+
+delete from name_category where name = '[n/a]';
+delete from name_category where name = '[unknown]';
+delete from name_category where name = 'common';
+delete from name_category where name = 'informal';
+
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format
+
+-- drop functions no longer used if they exist.
+drop function if exists nom_group(bigint);
+drop function if exists apni_ordered_refrences(bigint);
 
 -- find basionym
 drop function if exists basionym(bigint);
@@ -644,7 +839,6 @@ select jsonb_agg(
 from instance_on_accepted_tree(instanceid) tve
 $$;
 
-
 -- apni details as text output
 drop function if exists apni_detail_text(bigint);
 create function apni_detail_text(nameid bigint)
@@ -687,3 +881,72 @@ select jsonb_agg(
        )
 from apni_ordered_references(nameid) refs
 $$;
+
+-- Add apni_json field to name
+
+alter table name add column apni_json jsonb;
+
+-- add default mapper host to shard config (using tree.host_name
+delete from shard_config where name = 'mapper host';
+INSERT INTO shard_config (name, value, deprecated, use_notes)
+    (select 'mapper host', t.host_name || '/' , false, 'The external host address for the mapper with a trailing slash' from tree t where t.accepted_tree);
+
+-- re-write the synonymy html with new ordering - on current draft elements
+-- this will include current published elements, but shouldn't change synonymy except if it has been changed within the
+-- last 24 hours and not published.
+
+update tree_element te
+set synonyms_html = coalesce(synonyms_as_html(te.instance_id), '<synonyms></synonyms>')
+from tree_version_element tve
+       join tree_version tv on tve.tree_version_id = tv.id and tv.published = false
+where tve.tree_element_id = te.id;
+
+-- pre-emptive update of tree_element.display_html
+update tree_element te
+set display_html = '<data>' || n.full_name_html ||
+                   '<name-status class="' || ns.name|| '">, ' || ns.name || '</name-status> <citation>' || r.citation_html || '</citation></data>'
+from name n join name_status ns on n.name_status_id = ns.id,
+     instance i, reference r
+where te.name_id = n.id
+  and te.instance_id = i.id
+  and i.reference_id = r.id;
+
+-- clean up bhl_urls that are blank
+
+update instance set bhl_url = null where bhl_url = '';
+
+-- update the cached_synonymy_html
+update instance set cached_synonymy_html = coalesce(synonyms_as_html(id), '<synonyms></synonyms>') where id in (select distinct instance_id from tree_element);
+
+-- NSL-3097 NSL-2884 update hybrid name_elements
+update name set name_element = ne,  name_path = np || '/' || ne
+from (select n.id, p1.name_path np, (p1.name_element || ' ' || nt.connector|| ' ' || p2.name_element) ne
+      from name n
+             join name_type nt on n.name_type_id = nt.id and nt.formula
+             join name p1 on n.parent_id = p1.id
+             join name p2 on n.second_parent_id = p2.id
+      where p1.name_element <> '[unknown]'
+        and p2.name_element <> '[unknown]'
+        and (n.name_element is null or n.name_element = '[unknown]')) as hybrid
+where name.id = hybrid.id
+;
+
+-- do it twice to catch the last 10 that were unknown parents
+update name set name_element = ne,  name_path = np || '/' || ne
+from (select n.id, p1.name_path np, (p1.name_element || ' ' || nt.connector|| ' ' || p2.name_element) ne
+      from name n
+             join name_type nt on n.name_type_id = nt.id and nt.formula
+             join name p1 on n.parent_id = p1.id
+             join name p2 on n.second_parent_id = p2.id
+      where p1.name_element <> '[unknown]'
+        and p2.name_element <> '[unknown]'
+        and (n.name_element is null or n.name_element = '[unknown]')) as hybrid
+where name.id = hybrid.id
+;
+
+delete from notification;
+
+-- version
+UPDATE db_version
+SET version = 28
+WHERE id = 1;
