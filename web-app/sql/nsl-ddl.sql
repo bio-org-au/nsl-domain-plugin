@@ -1962,35 +1962,35 @@ SELECT jsonb_build_object('list',
                               jsonb_agg(jsonb_build_object(
                                   'host', host,
                                   'instance_id', syn_inst.id,
-                                  'instance_link',
-                                  syn_inst.uri,
-                                  'concept_link',
-                                  cites_inst.uri,
+                                  'instance_link', syn_inst.uri,
+                                  'concept_link', coalesce(cites_inst.uri, syn_inst.uri),
                                   'simple_name', synonym.simple_name,
                                   'type', it.name,
                                   'name_id', synonym.id :: BIGINT,
-                                  'name_link',
-                                  synonym.uri,
+                                  'name_link', synonym.uri,
                                   'full_name_html', synonym.full_name_html,
                                   'nom', it.nomenclatural,
                                   'tax', it.taxonomic,
                                   'mis', it.misapplied,
-                                  'cites', cites_ref.citation_html,
-                                  'cites_link',
-                                  '/reference/apni/' || cites_ref.id,
+                                  'cites', coalesce(cites_ref.citation, syn_ref.citation),
+                                  'cites_html', coalesce(cites_ref.citation_html, syn_ref.citation_html),
+                                  'cites_link', '/reference/'|| lower(conf.value) || '/' || (coalesce(cites_ref.id, syn_ref.id)),
                                   'year', cites_ref.year
                                 )), '[]' :: JSONB)
          )
 FROM Instance i,
      Instance syn_inst
        JOIN instance_type it ON syn_inst.instance_type_id = it.id
+       JOIN reference syn_ref on syn_inst.reference_id = syn_ref.id
        LEFT JOIN instance cites_inst ON syn_inst.cites_id = cites_inst.id
        LEFT JOIN reference cites_ref ON cites_inst.reference_id = cites_ref.id
     ,
-     name synonym
+     name synonym,
+     shard_config conf
 WHERE i.id = instance_id
   AND syn_inst.cited_by_id = i.id
-  AND synonym.id = syn_inst.name_id;
+  AND synonym.id = syn_inst.name_id
+  AND conf.name = 'name space';
 $$;
 
 -- instance notes
