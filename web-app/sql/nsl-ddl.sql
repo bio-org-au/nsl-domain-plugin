@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -405,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1068,14 +1068,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1917,24 +1917,26 @@ $$;
 drop function if exists synonym_as_html(bigint);
 create function synonym_as_html(instanceid bigint)
   returns TABLE(html text)
-language sql
-as $$
+  language sql
+as
+$$
 SELECT CASE
          WHEN it.nomenclatural
-                 THEN '<nom>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
-                      '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></nom>'
+           THEN '<nom>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                '</name-status> <year>(' || year || ')<year> <type>' || instance_type || '</type></nom>'
          WHEN it.taxonomic
-                 THEN '<tax>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
-                      '</name-status> <year>('|| year || ')<year> <type>' || instance_type || '</type></tax>'
+           THEN '<tax>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                '</name-status> <year>(' || year || ')<year> <type>' || instance_type || '</type></tax>'
          WHEN it.misapplied
-                 THEN '<mis>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
-                      '</name-status><type>' || instance_type || '</type> by <citation>' ||
-                      citation_html || '</citation></mis>'
+           THEN '<mis>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                '</name-status><type>' || instance_type || '</type> by <citation>' ||
+                citation_html || '</citation></mis>'
          WHEN it.synonym
-                 THEN '<syn>' || full_name_html || '<name-status class="' || name_status|| '">, ' || name_status ||
-                      '</name-status> <year>('|| year || ')<year> <type>' || it.name || '</type></syn>'
-         ELSE ''
-           END
+           THEN '<syn>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                '</name-status> <year>(' || year || ')<year> <type>' || it.name || '</type></syn>'
+         ELSE '<oth>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+              '</name-status> <type>' || it.name || '</type></oth>'
+         END
 FROM apni_ordered_synonymy(instanceid)
        join instance_type it on instance_type_id = it.id
 $$;
@@ -1949,40 +1951,41 @@ $$
 ;
 
 -- build JSONB representation of synonyms inside a shard TODO fix links
-DROP FUNCTION IF EXISTS synonyms_as_jsonb( BIGINT, TEXT );
+DROP FUNCTION IF EXISTS synonyms_as_jsonb(BIGINT, TEXT);
 CREATE FUNCTION synonyms_as_jsonb(instance_id BIGINT, host TEXT)
   RETURNS JSONB
-LANGUAGE SQL
-AS $$
+  LANGUAGE SQL
+AS
+$$
 SELECT jsonb_build_object('list',
                           coalesce(
-                            jsonb_agg(jsonb_build_object(
-                                        'host', host,
-                                        'instance_id', syn_inst.id,
-                                        'instance_link',
-                                        '/instance/apni/' || syn_inst.id,
-                                        'concept_link',
-                                        '/instance/apni/' || cites_inst.id,
-                                        'simple_name', synonym.simple_name,
-                                        'type', it.name,
-                                        'name_id', synonym.id :: BIGINT,
-                                        'name_link',
-                                        '/name/apni/' || synonym.id,
-                                        'full_name_html', synonym.full_name_html,
-                                        'nom', it.nomenclatural,
-                                        'tax', it.taxonomic,
-                                        'mis', it.misapplied,
-                                        'cites', cites_ref.citation_html,
-                                        'cites_link',
-                                        '/reference/apni/' || cites_ref.id,
-                                        'year', cites_ref.year
-                                          )), '[]' :: JSONB)
-           )
+                              jsonb_agg(jsonb_build_object(
+                                  'host', host,
+                                  'instance_id', syn_inst.id,
+                                  'instance_link',
+                                  syn_inst.uri,
+                                  'concept_link',
+                                  cites_inst.uri,
+                                  'simple_name', synonym.simple_name,
+                                  'type', it.name,
+                                  'name_id', synonym.id :: BIGINT,
+                                  'name_link',
+                                  synonym.uri,
+                                  'full_name_html', synonym.full_name_html,
+                                  'nom', it.nomenclatural,
+                                  'tax', it.taxonomic,
+                                  'mis', it.misapplied,
+                                  'cites', cites_ref.citation_html,
+                                  'cites_link',
+                                  '/reference/apni/' || cites_ref.id,
+                                  'year', cites_ref.year
+                                )), '[]' :: JSONB)
+         )
 FROM Instance i,
      Instance syn_inst
        JOIN instance_type it ON syn_inst.instance_type_id = it.id
-       JOIN instance cites_inst ON syn_inst.cites_id = cites_inst.id
-       JOIN reference cites_ref ON cites_inst.reference_id = cites_ref.id
+       LEFT JOIN instance cites_inst ON syn_inst.cites_id = cites_inst.id
+       LEFT JOIN reference cites_ref ON cites_inst.reference_id = cites_ref.id
     ,
      name synonym
 WHERE i.id = instance_id
