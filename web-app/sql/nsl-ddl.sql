@@ -2284,7 +2284,7 @@ CREATE INDEX tree_synonyms_index
 ALTER TABLE tree
   ADD CONSTRAINT draft_not_current CHECK (current_tree_version_id <> default_draft_tree_version_id);
 --
-INSERT INTO db_version (id, version) VALUES (1, 30);
+INSERT INTO db_version (id, version) VALUES (1, 31);
 
 -- populate-lookup-tables.sql
 -- Populate lookup tables (currently botanical)
