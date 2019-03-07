@@ -364,7 +364,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
           tree.name                                                                                       AS "datasetName",
           te.instance_link                                                                                AS "taxonConceptID",
           acc_ref.citation                                                                                AS "nameAccordingTo",
-          tree.host_name || '/reference/${namespace}/' || acc_ref.id                                      AS "nameAccordingToID",
+          tree.host_name || '/reference/' || name_space.val|| '/' || acc_ref.id                         AS "nameAccordingToID",
           profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
           profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
           -- todo check this is ok for synonyms
@@ -402,7 +402,8 @@ CREATE MATERIALIZED VIEW taxon_view AS
           JOIN name_rank acc_rank ON acc_name.name_rank_id = acc_rank.id
           LEFT OUTER JOIN NAME firstHybridParent ON acc_name.parent_id = firstHybridParent.id AND acc_nt.hybrid
           LEFT OUTER JOIN NAME secondHybridParent
-                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid
+                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid,
+        (SELECT lower(value) val FROM public.shard_config WHERE name = 'name space') name_space
    ORDER BY "higherClassification");
 
 -- version
