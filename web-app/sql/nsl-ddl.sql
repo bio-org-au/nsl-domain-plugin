@@ -51,10 +51,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -405,8 +405,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1068,14 +1068,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1943,7 +1943,43 @@ CREATE MATERIALIZED VIEW taxon_view AS
           LEFT OUTER JOIN NAME secondHybridParent
                           ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid,
         (SELECT lower(value) val FROM public.shard_config WHERE name = 'name space') name_space
-   ORDER BY "higherClassification");
+   ORDER BY "higherClassification")
+
+comment on materialized view taxon_view is 'The Taxon View provides a complete list of Names and their synonyms accepted by CHAH in Australia.';
+comment on column taxon_view."taxonomicStatus" is 'Is this name accepted, excluded or a synonym of an accepted name.';
+comment on column taxon_view."scientificName" is 'The full scientific name including authority.';
+comment on column taxon_view."scientificNameID" is 'The identifying URI of the scientific name in this dataset.';
+comment on column taxon_view."acceptedNameUsage" is 'The accepted name for this concept in this classification.';
+comment on column taxon_view."acceptedNameUsageID" is 'The identifying URI of the accepted name concept.';
+comment on column taxon_view."taxonID" is 'The identifying URI of the taxon concept used here. For an accepted name it identifies the taxon concept and what it encloses (subtaxa). For a synonym it identifies the relationship.';
+comment on column taxon_view."nameType" is 'A categorisation of the name, e.g. scientific, hybrid, cultivar';
+comment on column taxon_view."nomenclaturalStatus" is 'The nomencultural status of this name. http://rs.gbif.org/vocabulary/gbif/nomenclatural_status.xml';
+comment on column taxon_view."proParte" is 'A flag that indicates this name is applied to this accepted name in part. If a name is ''pro parte'' then the name will have more than 1 accepted name.';
+comment on column taxon_view."canonicalName" is 'The name without authorship.';
+comment on column taxon_view."scientificNameAuthorship" is 'Authorship of the name.';
+comment on column taxon_view."parentNameUsageID" is 'The identifying URI of the parent taxon for accepted names in the classification.';
+comment on column taxon_view."taxonRank" is 'The taxonomic rank of the scientificName.';
+comment on column taxon_view."taxonRankSortOrder" is 'A sort order that can be applied to the rank.';
+comment on column taxon_view.kindom is 'The canonical name of the kingdom based on this classification.';
+comment on column taxon_view.class is 'The canonical name of the class based on this classification.';
+comment on column taxon_view.subclass is 'The canonical name of the subclass based on this classification.';
+comment on column taxon_view.family is 'The canonical name of the family based on this classification.';
+comment on column taxon_view.created is 'Date the record for this concept was created. Format ISO:86 01';
+comment on column taxon_view.modified is 'Date the record for this concept was modified. Format ISO:86 01';
+comment on column taxon_view."datasetName" is 'Name of the taxonomy (tree) that contains this concept. e.g. APC, AusMoss';
+comment on column taxon_view."taxonConceptID" is 'The identifying URI taxanomic concept this record refers to.';
+comment on column taxon_view."nameAccordingTo" is 'The reference citation for this name.';
+comment on column taxon_view."nameAccordingToID" is 'The identifying URI for the reference citation for this name.';
+comment on column taxon_view."taxonRemarks" is 'Comments made specifically about this name in this classification.';
+comment on column taxon_view."taxonDistribution" is 'The State or Territory distribution of the accepted name.';
+comment on column taxon_view."higherClassification" is 'A list of names representing the branch down to (and including) this name separated by a "|".';
+comment on column taxon_view."firstHybridParentName" is 'The scientificName for the first hybrid parent. For hybrids.';
+comment on column taxon_view."firstHybridParentNameID" is 'The identifying URI the scientificName for the first hybrid parent.';
+comment on column taxon_view."secondHybridParentName" is 'The scientificName for the second hybrid parent. For hybrids.';
+comment on column taxon_view."secondHybridParentNameID" is 'The identifying URI the scientificName for the second hybrid parent.';
+comment on column taxon_view."nomenclaturalCode" is ' The nomenclatural code under which this name is constructed.';
+comment on column taxon_view.license is ' The license by which this data is being made available.';
+comment on column taxon_view."ccAttributionIRI " is 'The attribution to be used when citing this concept.';
 -- functions.sql
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format

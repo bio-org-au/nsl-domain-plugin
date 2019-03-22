@@ -406,6 +406,42 @@ CREATE MATERIALIZED VIEW taxon_view AS
         (SELECT lower(value) val FROM public.shard_config WHERE name = 'name space') name_space
    ORDER BY "higherClassification");
 
+comment on materialized view taxon_view is 'The Taxon View provides a complete list of Names and their synonyms accepted by CHAH in Australia.';
+comment on column taxon_view."taxonomicStatus" is 'Is this name accepted, excluded or a synonym of an accepted name.';
+comment on column taxon_view."scientificName" is 'The full scientific name including authority.';
+comment on column taxon_view."scientificNameID" is 'The identifying URI of the scientific name in this dataset.';
+comment on column taxon_view."acceptedNameUsage" is 'The accepted name for this concept in this classification.';
+comment on column taxon_view."acceptedNameUsageID" is 'The identifying URI of the accepted name concept.';
+comment on column taxon_view."taxonID" is 'The identifying URI of the taxon concept used here. For an accepted name it identifies the taxon concept and what it encloses (subtaxa). For a synonym it identifies the relationship.';
+comment on column taxon_view."nameType" is 'A categorisation of the name, e.g. scientific, hybrid, cultivar';
+comment on column taxon_view."nomenclaturalStatus" is 'The nomencultural status of this name. http://rs.gbif.org/vocabulary/gbif/nomenclatural_status.xml';
+comment on column taxon_view."proParte" is 'A flag that indicates this name is applied to this accepted name in part. If a name is ''pro parte'' then the name will have more than 1 accepted name.';
+comment on column taxon_view."canonicalName" is 'The name without authorship.';
+comment on column taxon_view."scientificNameAuthorship" is 'Authorship of the name.';
+comment on column taxon_view."parentNameUsageID" is 'The identifying URI of the parent taxon for accepted names in the classification.';
+comment on column taxon_view."taxonRank" is 'The taxonomic rank of the scientificName.';
+comment on column taxon_view."taxonRankSortOrder" is 'A sort order that can be applied to the rank.';
+comment on column taxon_view.kindom is 'The canonical name of the kingdom based on this classification.';
+comment on column taxon_view.class is 'The canonical name of the class based on this classification.';
+comment on column taxon_view.subclass is 'The canonical name of the subclass based on this classification.';
+comment on column taxon_view.family is 'The canonical name of the family based on this classification.';
+comment on column taxon_view.created is 'Date the record for this concept was created. Format ISO:86 01';
+comment on column taxon_view.modified is 'Date the record for this concept was modified. Format ISO:86 01';
+comment on column taxon_view."datasetName" is 'Name of the taxonomy (tree) that contains this concept. e.g. APC, AusMoss';
+comment on column taxon_view."taxonConceptID" is 'The identifying URI taxanomic concept this record refers to.';
+comment on column taxon_view."nameAccordingTo" is 'The reference citation for this name.';
+comment on column taxon_view."nameAccordingToID" is 'The identifying URI for the reference citation for this name.';
+comment on column taxon_view."taxonRemarks" is 'Comments made specifically about this name in this classification.';
+comment on column taxon_view."taxonDistribution" is 'The State or Territory distribution of the accepted name.';
+comment on column taxon_view."higherClassification" is 'A list of names representing the branch down to (and including) this name separated by a "|".';
+comment on column taxon_view."firstHybridParentName" is 'The scientificName for the first hybrid parent. For hybrids.';
+comment on column taxon_view."firstHybridParentNameID" is 'The identifying URI the scientificName for the first hybrid parent.';
+comment on column taxon_view."secondHybridParentName" is 'The scientificName for the second hybrid parent. For hybrids.';
+comment on column taxon_view."secondHybridParentNameID" is 'The identifying URI the scientificName for the second hybrid parent.';
+comment on column taxon_view."nomenclaturalCode" is ' The nomenclatural code under which this name is constructed.';
+comment on column taxon_view.license is ' The license by which this data is being made available.';
+comment on column taxon_view."ccAttributionIRI " is 'The attribution to be used when citing this concept.';
+
 -- version
 UPDATE db_version
 SET version = 31
