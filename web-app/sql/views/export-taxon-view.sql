@@ -161,7 +161,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
           tree.name                                                                                       AS "datasetName",
           te.instance_link                                                                                AS "taxonConceptID",
           acc_ref.citation                                                                                AS "nameAccordingTo",
-          tree.host_name || '/reference/' || name_space.val|| '/' || acc_ref.id                         AS "nameAccordingToID",
+          tree.host_name || '/reference/' || lower(name_space.value)|| '/' || acc_ref.id                         AS "nameAccordingToID",
           profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
           profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
           -- todo check this is ok for synonyms
@@ -199,9 +199,9 @@ CREATE MATERIALIZED VIEW taxon_view AS
           JOIN name_rank acc_rank ON acc_name.name_rank_id = acc_rank.id
           LEFT OUTER JOIN NAME firstHybridParent ON acc_name.parent_id = firstHybridParent.id AND acc_nt.hybrid
           LEFT OUTER JOIN NAME secondHybridParent
-                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid,
-        (SELECT lower(value) val FROM public.shard_config WHERE name = 'name space') name_space
-   ORDER BY "higherClassification")
+                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid
+          LEFT OUTER JOIN shard_config name_space on name_space.name = 'name space'
+   ORDER BY "higherClassification");
 
 comment on materialized view taxon_view is 'The Taxon View provides a complete list of Names and their synonyms accepted by CHAH in Australia.';
 comment on column taxon_view."taxonomicStatus" is 'Is this name accepted, excluded or a synonym of an accepted name.';

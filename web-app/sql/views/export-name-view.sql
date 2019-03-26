@@ -193,9 +193,9 @@ FROM name n
        LEFT OUTER JOIN INSTANCE basionym_inst
        JOIN instance_type bit ON bit.id = basionym_inst.instance_type_id AND bit.name = 'basionym'
        JOIN NAME basionym ON basionym.id = basionym_inst.name_id
-            ON basionym_inst.cited_by_id = primary_inst.id,
-     (SELECT value FROM public.shard_config WHERE name = 'mapper host') mapper_host,
-     (SELECT value FROM public.shard_config WHERE name = 'name label') dataset
+            ON basionym_inst.cited_by_id = primary_inst.id
+       LEFT OUTER JOIN shard_config mapper_host on mapper_host.name = 'mapper host'
+       LEFT OUTER JOIN shard_config dataset on dataset.name = 'name label'
 WHERE exists(SELECT 1
              FROM instance
              WHERE name_id = n.id)

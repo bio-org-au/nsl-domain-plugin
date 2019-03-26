@@ -193,9 +193,10 @@ FROM name n
        LEFT OUTER JOIN INSTANCE basionym_inst
        JOIN instance_type bit ON bit.id = basionym_inst.instance_type_id AND bit.name = 'basionym'
        JOIN NAME basionym ON basionym.id = basionym_inst.name_id
-            ON basionym_inst.cited_by_id = primary_inst.id,
-     (SELECT value FROM public.shard_config WHERE name = 'mapper host') mapper_host,
-     (SELECT value FROM public.shard_config WHERE name = 'name label') dataset
+            ON basionym_inst.cited_by_id = primary_inst.id
+       LEFT OUTER JOIN shard_config mapper_host on mapper_host.name = 'mapper host'
+       LEFT OUTER JOIN shard_config dataset on dataset.name = 'name label'
+
 WHERE exists(SELECT 1
              FROM instance
              WHERE name_id = n.id)
@@ -364,7 +365,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
           tree.name                                                                                       AS "datasetName",
           te.instance_link                                                                                AS "taxonConceptID",
           acc_ref.citation                                                                                AS "nameAccordingTo",
-          tree.host_name || '/reference/' || name_space.val|| '/' || acc_ref.id                         AS "nameAccordingToID",
+          tree.host_name || '/reference/' || lower(name_space.value)|| '/' || acc_ref.id                         AS "nameAccordingToID",
           profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
           profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
           -- todo check this is ok for synonyms
@@ -402,8 +403,8 @@ CREATE MATERIALIZED VIEW taxon_view AS
           JOIN name_rank acc_rank ON acc_name.name_rank_id = acc_rank.id
           LEFT OUTER JOIN NAME firstHybridParent ON acc_name.parent_id = firstHybridParent.id AND acc_nt.hybrid
           LEFT OUTER JOIN NAME secondHybridParent
-                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid,
-        (SELECT lower(value) val FROM public.shard_config WHERE name = 'name space') name_space
+                          ON acc_name.second_parent_id = secondHybridParent.id AND acc_nt.hybrid
+          LEFT OUTER JOIN shard_config name_space on name_space.name = 'name space'
    ORDER BY "higherClassification");
 
 comment on materialized view taxon_view is 'The Taxon View provides a complete list of Names and their synonyms accepted by CHAH in Australia.';
@@ -441,6 +442,9 @@ comment on column taxon_view."secondHybridParentNameID" is 'The identifying URI 
 comment on column taxon_view."nomenclaturalCode" is ' The nomenclatural code under which this name is constructed.';
 comment on column taxon_view.license is ' The license by which this data is being made available.';
 comment on column taxon_view."ccAttributionIRI " is 'The attribution to be used when citing this concept.';
+
+GRANT SELECT ON taxon_view to ${webUserName};
+GRANT SELECT ON name_view to ${webUserName};
 
 -- version
 UPDATE db_version
