@@ -23,6 +23,7 @@ class DistStatus {
     String name
     Boolean deprecated = false
     String descriptionHtml
+    Integer sortOrder
 
     /**
      * combining status is a status that is allowed to be combined with this status
@@ -37,6 +38,7 @@ class DistStatus {
         version column: 'lock_version', defaultValue: "0"
         deprecated defaultValue: "false"
         descriptionHtml sqlType: 'text'
+        sortOrder defaultValue: "0"
     }
 
     static constraints = {

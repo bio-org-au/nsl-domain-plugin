@@ -28,6 +28,7 @@ create table dist_region
     deprecated       boolean default false                     not null,
     description_html text,
     name             varchar(255)                              not null,
+    sort_order       int4    default 0                         not null,
     primary key (id)
 );
 
@@ -38,6 +39,7 @@ create table dist_status
     deprecated       boolean default false                     not null,
     description_html text,
     name             varchar(255)                              not null,
+    sort_order       int4    default 0                         not null,
     primary key (id)
 );
 

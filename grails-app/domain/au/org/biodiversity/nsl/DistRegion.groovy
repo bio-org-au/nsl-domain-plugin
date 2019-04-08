@@ -23,6 +23,7 @@ class DistRegion {
     String name
     Boolean deprecated = false
     String descriptionHtml
+    Integer sortOrder
 
 //    static hasMany = []
 //    static belongsTo = []
@@ -34,6 +35,7 @@ class DistRegion {
         version column: 'lock_version', defaultValue: "0"
         deprecated defaultValue: "false"
         descriptionHtml sqlType: 'text'
+        sortOrder defaultValue: "0"
     }
 
     static constraints = {
