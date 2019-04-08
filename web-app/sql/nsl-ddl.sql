@@ -17,6 +17,24 @@
     alter table if exists comment 
         drop constraint if exists FK_3tfkdcmf6rg6hcyiu8t05er7x;
 
+    alter table if exists dist_entry 
+        drop constraint if exists FK_ffleu7615efcrsst8l64wvomw;
+
+    alter table if exists dist_entry 
+        drop constraint if exists FK_d9a9gcy3hbk8s5slosux1k5uc;
+
+    alter table if exists dist_entry_dist_status 
+        drop constraint if exists FK_jnh4hl7ev54cknuwm5juvb22i;
+
+    alter table if exists dist_entry_dist_status 
+        drop constraint if exists FK_cpmfv1d7wlx26gjiyxrebjvxn;
+
+    alter table if exists dist_status_dist_status 
+        drop constraint if exists FK_g38me2w6f5ismhdjbj8je7nv0;
+
+    alter table if exists dist_status_dist_status 
+        drop constraint if exists FK_q0p6tn5peagvsl7xmqcy39yuh;
+
     alter table if exists id_mapper 
         drop constraint if exists FK_qiy281xsleyhjgr0eu1sboagm;
 
@@ -51,10 +69,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -184,7 +202,15 @@
 
     drop table if exists delayed_jobs cascade;
 
-    drop table if exists distribution cascade;
+    drop table if exists dist_entry cascade;
+
+    drop table if exists dist_entry_dist_status cascade;
+
+    drop table if exists dist_region cascade;
+
+    drop table if exists dist_status cascade;
+
+    drop table if exists dist_status_dist_status cascade;
 
     drop table if exists event_record cascade;
 
@@ -313,16 +339,40 @@
         primary key (id)
     );
 
-    create table distribution (
+    create table dist_entry (
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
-        description varchar(100) not null,
-        is_doubtfully_naturalised boolean default false not null,
-        is_extinct boolean default false not null,
-        is_native boolean default false not null,
-        is_naturalised boolean default false not null,
-        region varchar(10) not null,
+        region_id int8 not null,
+        tree_element_id int8 not null,
         primary key (id)
+    );
+
+    create table dist_entry_dist_status (
+        dist_entry_status_id int8,
+        dist_status_id int8
+    );
+
+    create table dist_region (
+        id int8 default nextval('nsl_global_seq') not null,
+        lock_version int8 default 0 not null,
+        deprecated boolean default false not null,
+        description_html text,
+        name varchar(255) not null,
+        primary key (id)
+    );
+
+    create table dist_status (
+        id int8 default nextval('nsl_global_seq') not null,
+        lock_version int8 default 0 not null,
+        deprecated boolean default false not null,
+        description_html text,
+        name varchar(255) not null,
+        primary key (id)
+    );
+
+    create table dist_status_dist_status (
+        dist_status_combining_status_id int8,
+        dist_status_id int8
     );
 
     create table event_record (
@@ -405,8 +455,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -823,6 +873,12 @@
 
     create index Comment_reference_Index on comment (reference_id);
 
+    alter table if exists dist_region 
+        add constraint UK_dtx2gm3sr51pk6b0fysp1ij9r  unique (name);
+
+    alter table if exists dist_status 
+        add constraint UK_l9d1nxtobmh259wkmxkduec09  unique (name);
+
     create index event_record_created_index on event_record (created_at);
 
     create index event_record_index on event_record (created_at, dealt_with, type);
@@ -1012,6 +1068,36 @@
         foreign key (reference_id) 
         references reference;
 
+    alter table if exists dist_entry 
+        add constraint FK_ffleu7615efcrsst8l64wvomw 
+        foreign key (region_id) 
+        references dist_region;
+
+    alter table if exists dist_entry 
+        add constraint FK_d9a9gcy3hbk8s5slosux1k5uc 
+        foreign key (tree_element_id) 
+        references tree_element;
+
+    alter table if exists dist_entry_dist_status 
+        add constraint FK_jnh4hl7ev54cknuwm5juvb22i 
+        foreign key (dist_status_id) 
+        references dist_status;
+
+    alter table if exists dist_entry_dist_status 
+        add constraint FK_cpmfv1d7wlx26gjiyxrebjvxn 
+        foreign key (dist_entry_status_id) 
+        references dist_entry;
+
+    alter table if exists dist_status_dist_status 
+        add constraint FK_g38me2w6f5ismhdjbj8je7nv0 
+        foreign key (dist_status_id) 
+        references dist_status;
+
+    alter table if exists dist_status_dist_status 
+        add constraint FK_q0p6tn5peagvsl7xmqcy39yuh 
+        foreign key (dist_status_combining_status_id) 
+        references dist_status;
+
     alter table if exists id_mapper 
         add constraint FK_qiy281xsleyhjgr0eu1sboagm 
         foreign key (namespace_id) 
@@ -1068,14 +1154,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -2724,10 +2810,14 @@ DROP INDEX IF EXISTS tree_synonyms_index;
 CREATE INDEX tree_synonyms_index
   ON tree_element USING GIN (synonyms);
 
--- new tree make sure the draft is not also the current version.
+-- tree make sure the draft is not also the current version.
 ALTER TABLE tree
   ADD CONSTRAINT draft_not_current CHECK (current_tree_version_id <> default_draft_tree_version_id);
 --
+
+-- make sure a set of distributions only contains a region once
+alter table dist_entry add constraint de_unique_region unique (region_id, tree_element_id);
+
 INSERT INTO db_version (id, version) VALUES (1, 32);
 
 -- populate-lookup-tables.sql

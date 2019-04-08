@@ -21,9 +21,7 @@ import groovy.transform.ToString
 class DistRegion {
 
     String name
-    Boolean display = true
     Boolean deprecated = false
-    String rdfId
     String descriptionHtml
 
 //    static hasMany = []
@@ -34,14 +32,12 @@ class DistRegion {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
-        display defaultValue: "true"
         deprecated defaultValue: "false"
         descriptionHtml sqlType: 'text'
     }
 
     static constraints = {
         name unique: true
-        rdfId maxSize: 50, nullable: true
         descriptionHtml nullable: true
     }
 
