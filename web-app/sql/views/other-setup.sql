@@ -48,8 +48,12 @@ DROP INDEX IF EXISTS tree_synonyms_index;
 CREATE INDEX tree_synonyms_index
   ON tree_element USING GIN (synonyms);
 
--- new tree make sure the draft is not also the current version.
+-- tree make sure the draft is not also the current version.
 ALTER TABLE tree
   ADD CONSTRAINT draft_not_current CHECK (current_tree_version_id <> default_draft_tree_version_id);
 --
+
+-- make sure a set of distributions only contains a region once
+alter table dist_entry add constraint de_unique_region unique (region_id, tree_element_id);
+
 INSERT INTO db_version (id, version) VALUES (1, 31);
