@@ -1,7 +1,9 @@
+alter table name_status drop column if exists deprecated;
+
 ALTER TABLE name_status
   ADD COLUMN deprecated BOOLEAN DEFAULT FALSE NOT NULL;
 
-DROP VIEW public.accepted_name_vw;
+DROP VIEW if exists  public.accepted_name_vw;
 CREATE VIEW public.accepted_name_vw AS
   SELECT
     accepted.id,
@@ -38,7 +40,7 @@ CREATE VIEW public.accepted_name_vw AS
         AND tree_node.checked_in_at_id IS NOT NULL
         AND instance.id = tree_node.instance_id;
 
-DROP VIEW public.accepted_synonym_vw;
+DROP VIEW if exists  public.accepted_synonym_vw;
 CREATE VIEW public.accepted_synonym_vw AS
   SELECT
     name_as_syn.id,
@@ -174,6 +176,8 @@ ALTER TABLE IF EXISTS tree_value_uri
 FOREIGN KEY (root_id)
 REFERENCES tree_arrangement;
 
+-- NOTE this is very APNI/APC specific and may fail if you are upgrading another shard
+-- That shouldn't happen, because you started from a later version, right?
 INSERT INTO TREE_VALUE_URI (
   root_id,
   link_uri_ns_part_id,
