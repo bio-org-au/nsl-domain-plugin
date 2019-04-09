@@ -2,9 +2,9 @@ drop table if exists distribution;
 
 drop table if exists dist_entry_dist_status;
 drop table if exists dist_status_dist_status;
-drop table if exists dist_enty;
-drop table if exists dist_region;
-drop table if exists dist_status;
+drop table if exists dist_entry cascade;
+drop table if exists dist_region cascade;
+drop table if exists dist_status cascade;
 
 create table dist_entry
 (
@@ -27,6 +27,7 @@ create table dist_region
     lock_version     int8    default 0                         not null,
     deprecated       boolean default false                     not null,
     description_html text,
+    def_link         varchar(255),
     name             varchar(255)                              not null,
     sort_order       int4    default 0                         not null,
     primary key (id)
@@ -38,6 +39,7 @@ create table dist_status
     lock_version     int8    default 0                         not null,
     deprecated       boolean default false                     not null,
     description_html text,
+    def_link         varchar(255),
     name             varchar(255)                              not null,
     sort_order       int4    default 0                         not null,
     primary key (id)

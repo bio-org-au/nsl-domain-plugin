@@ -23,6 +23,7 @@ class DistRegion {
     String name
     Boolean deprecated = false
     String descriptionHtml
+    String  def_link //link to the definition of this region
     Integer sortOrder
 
 //    static hasMany = []
@@ -41,6 +42,7 @@ class DistRegion {
     static constraints = {
         name unique: true
         descriptionHtml nullable: true
+        def_link nullable: true
     }
 
     boolean equals(o) {

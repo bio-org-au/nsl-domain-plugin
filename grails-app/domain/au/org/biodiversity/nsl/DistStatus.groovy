@@ -23,6 +23,7 @@ class DistStatus {
     String name
     Boolean deprecated = false
     String descriptionHtml
+    String  def_link //link to the definition of this status (term)
     Integer sortOrder
 
     /**
@@ -44,6 +45,7 @@ class DistStatus {
     static constraints = {
         name unique: true
         descriptionHtml nullable: true
+        def_link nullable: true
     }
 
     boolean equals(o) {
