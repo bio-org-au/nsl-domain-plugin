@@ -2763,6 +2763,53 @@ select jsonb_agg(
        )
 from apni_ordered_references(nameid) refs
 $$;
+
+-- functions to construct display distribution strings
+drop function if exists dist_entry_status(BIGINT);
+create function dist_entry_status(entry_id BIGINT)
+    returns text
+    language sql as
+$$
+with status as (
+    SELECT string_agg(ds.name, ' and ') status
+    from (
+             select ds.name
+             FROM dist_entry de
+                      join dist_region dr on de.region_id = dr.id
+                      join dist_entry_dist_status deds on de.id = deds.dist_entry_status_id
+                      join dist_status ds on deds.dist_status_id = ds.id
+             where de.id = entry_id
+             order by ds.sort_order) ds
+)
+select case
+           when status.status = 'native' then
+               ''
+           else
+                   '(' || status.status || ')'
+           end
+from status;
+$$;
+
+drop function if exists distribution(BIGINT);
+create function distribution(element_id BIGINT)
+    returns text
+    language sql as
+$$
+select string_agg(entries.entry, ', ')
+from (SELECT case
+                 when status = '' then
+                     dr.name
+                 else
+                         dr.name || ' ' || status
+                 end as entry
+      FROM dist_entry de
+               join dist_region dr on de.region_id = dr.id,
+           dist_entry_status(de.id) status
+      where de.tree_element_id = element_id
+      order by dr.sort_order
+     ) entries
+$$;
+
 -- other-setup.sql
 --other setup
 ALTER TABLE instance
