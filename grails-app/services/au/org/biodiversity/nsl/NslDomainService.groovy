@@ -69,7 +69,7 @@ class NslDomainService {
                 runSqlBits(splitSql(sqlSource), sql)
             }
         }
-        if(params.postUpgradeScript) {
+        if (params.postUpgradeScript) {
             runPostUpgradeScript(params.postUpgradeScript)
         }
         sessionFactory_nsl.getCurrentSession().flush()
@@ -92,8 +92,8 @@ class NslDomainService {
 
     @SuppressWarnings("GrMethodMayBeStatic")
     private runSqlBits(String[] bits, Sql sql) {
-        if(bits.size() > 0) {
-            for (String bit in bits){
+        if (bits.size() > 0) {
+            for (String bit in bits) {
                 log.info "Update: ${bit.find(/.*/)}"
                 String src = bit.replaceFirst(/.*/, '')
                 log.debug src
@@ -108,13 +108,13 @@ class NslDomainService {
         return ('-- Start\n' + source).split(/\n--/)
     }
 
-    private static replaceParams(File file, Map params){
-        String sqlSource = file.text.replaceAll('\\$\\$', 'DollarDelimit')
-                                     .replaceAll('\\$do\\$', 'DollarDoDelimit')
-        def engine = new SimpleTemplateEngine()
-        def template = engine.createTemplate(sqlSource).make(params)
-        sqlSource = template.toString().replaceAll('DollarDelimit', '\\$\\$')
-                            .replaceAll('DollarDoDelimit', '\\$do\\$')
+    private static replaceParams(File file, Map params) {
+        String sqlSource = file.text
+        params.each {k,v ->
+            String match = '\\$\\{' + k + '\\}'
+            log.debug "Replacing $match with $v"
+            sqlSource = sqlSource.replaceAll(match, v as String)
+        }
         return sqlSource
     }
 

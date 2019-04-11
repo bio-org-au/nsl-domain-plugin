@@ -266,15 +266,6 @@ from dist_entry de
 where deds is null
   and ds.name = 'native';
 
------------------ 8< ---------------
-
-select te.id, te.simple_name, te.profile->'APC Dist.' ->> 'value', distribution(te.id)
-from tree_element te
-         JOIN tree_version_element tve ON te.id = tve.tree_element_id
-         JOIN tree t ON tve.tree_version_id = t.current_tree_version_id AND t.name = 'APC'
-where te.profile->'APC Dist.' ->> 'value' <> distribution(te.id);
-
-
 -- version
 UPDATE db_version
 SET version = 32
