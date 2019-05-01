@@ -69,10 +69,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -459,8 +459,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1160,14 +1160,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1923,8 +1923,8 @@ CREATE MATERIALIZED VIEW taxon_view AS
             tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonConceptID",
             (syn ->> 'cites')                                                                               AS "nameAccordingTo",
             tree.host_name || (syn ->> 'cites_link')                                                        AS "nameAccordingToID",
-            profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
-            profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
+            profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
+            profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
             regexp_replace(tve.name_path, '/', '|', 'g')                                                    AS "higherClassification",
             CASE
@@ -1947,7 +1947,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            syn ->> 'instance_link'                                                                         AS "ccAttributionIRI"
+            tree.host_name || '/' || syn ->> 'instance_link'                                                AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
@@ -2011,8 +2011,8 @@ CREATE MATERIALIZED VIEW taxon_view AS
             acc_ref.citation                                                                                AS "nameAccordingTo",
             tree.host_name || '/reference/' || lower(name_space.value) || '/' ||
             acc_ref.id                                                                                      AS "nameAccordingToID",
-            profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
-            profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
+            profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
+            profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
             regexp_replace(tve.name_path, '/', '|', 'g')                                                    AS "higherClassification",
             CASE
@@ -2035,7 +2035,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            tve.element_link                                                                                AS "ccAttributionIRI"
+            tree.host_name || tve.element_link                                                              AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
@@ -2067,7 +2067,7 @@ comment on column taxon_view."scientificNameAuthorship" is 'Authorship of the na
 comment on column taxon_view."parentNameUsageID" is 'The identifying URI of the parent taxon for accepted names in the classification.';
 comment on column taxon_view."taxonRank" is 'The taxonomic rank of the scientificName.';
 comment on column taxon_view."taxonRankSortOrder" is 'A sort order that can be applied to the rank.';
-comment on column taxon_view.kindom is 'The canonical name of the kingdom based on this classification.';
+comment on column taxon_view.kingdom is 'The canonical name of the kingdom based on this classification.';
 comment on column taxon_view.class is 'The canonical name of the class based on this classification.';
 comment on column taxon_view.subclass is 'The canonical name of the subclass based on this classification.';
 comment on column taxon_view.family is 'The canonical name of the family based on this classification.';
@@ -2084,9 +2084,9 @@ comment on column taxon_view."firstHybridParentName" is 'The scientificName for 
 comment on column taxon_view."firstHybridParentNameID" is 'The identifying URI the scientificName for the first hybrid parent.';
 comment on column taxon_view."secondHybridParentName" is 'The scientificName for the second hybrid parent. For hybrids.';
 comment on column taxon_view."secondHybridParentNameID" is 'The identifying URI the scientificName for the second hybrid parent.';
-comment on column taxon_view."nomenclaturalCode" is ' The nomenclatural code under which this name is constructed.';
-comment on column taxon_view.license is ' The license by which this data is being made available.';
-comment on column taxon_view."ccAttributionIRI " is 'The attribution to be used when citing this concept.';
+comment on column taxon_view."nomenclaturalCode" is 'The nomenclatural code under which this name is constructed.';
+comment on column taxon_view.license is 'The license by which this data is being made available.';
+comment on column taxon_view."ccAttributionIRI" is 'The attribution to be used when citing this concept.';
 -- functions.sql
 -- NSL-752 NSL-2894
 -- functions to get ordered output as needed by the APNI format

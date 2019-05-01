@@ -324,7 +324,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             CASE
                 WHEN acc_ns.name NOT IN ('legitimate', '[default]')
                     THEN acc_ns.name
-                ELSE NULL END                                                                                 AS "nomenclaturalStatus",
+                ELSE NULL END                                                                               AS "nomenclaturalStatus",
             syn ->> 'type'                                                                                  AS "taxonomicStatus",
             (syn ->> 'type' ~ 'parte')                                                                      AS "proParte",
             syn_name.full_name                                                                              AS "scientificName",
@@ -333,17 +333,24 @@ CREATE MATERIALIZED VIEW taxon_view AS
             CASE
                 WHEN syn_nt.autonym
                     THEN NULL
-                ELSE regexp_replace(substring(syn_name.full_name_html FROM '<authors>(.*)</authors>'), '<[^>]*>', '', 'g')
-                END                                                                                           AS "scientificNameAuthorship",
+                ELSE regexp_replace(substring(syn_name.full_name_html FROM '<authors>(.*)</authors>'), '<[^>]*>', '',
+                                    'g')
+                END                                                                                         AS "scientificNameAuthorship",
             -- only in accepted names
             NULL                                                                                            AS "parentNameUsageID",
             syn_rank.name                                                                                   AS "taxonRank",
             syn_rank.sort_order                                                                             AS "taxonRankSortOrder",
-            (SELECT name_element FROM find_tree_rank(tve.element_link, 10) ORDER BY sort_order ASC LIMIT 1) AS "kingdom",
+            (SELECT name_element
+             FROM find_tree_rank(tve.element_link, 10)
+             ORDER BY sort_order ASC
+             LIMIT 1)                                                                                       AS "kingdom",
             -- the below works but is a little slow
             -- find another efficient way to do it.
             (SELECT name_element FROM find_tree_rank(tve.element_link, 30) ORDER BY sort_order ASC LIMIT 1) AS "class",
-            (SELECT name_element FROM find_tree_rank(tve.element_link, 40) ORDER BY sort_order ASC LIMIT 1) AS "subclass",
+            (SELECT name_element
+             FROM find_tree_rank(tve.element_link, 40)
+             ORDER BY sort_order ASC
+             LIMIT 1)                                                                                       AS "subclass",
             (SELECT name_element FROM find_tree_rank(tve.element_link, 80) ORDER BY sort_order ASC LIMIT 1) AS "family",
             syn_name.created_at                                                                             AS "created",
             syn_name.updated_at                                                                             AS "modified",
@@ -351,31 +358,31 @@ CREATE MATERIALIZED VIEW taxon_view AS
             tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonConceptID",
             (syn ->> 'cites')                                                                               AS "nameAccordingTo",
             tree.host_name || (syn ->> 'cites_link')                                                        AS "nameAccordingToID",
-            profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
-            profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
+            profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
+            profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
             regexp_replace(tve.name_path, '/', '|', 'g')                                                    AS "higherClassification",
             CASE
                 WHEN firstHybridParent.id IS NOT NULL
                     THEN firstHybridParent.full_name
-                ELSE NULL END                                                                                 AS "firstHybridParentName",
+                ELSE NULL END                                                                               AS "firstHybridParentName",
             CASE
                 WHEN firstHybridParent.id IS NOT NULL
                     THEN tree.host_name || '/' || firstHybridParent.uri
-                ELSE NULL END                                                                                 AS "firstHybridParentNameID",
+                ELSE NULL END                                                                               AS "firstHybridParentNameID",
             CASE
                 WHEN secondHybridParent.id IS NOT NULL
                     THEN secondHybridParent.full_name
-                ELSE NULL END                                                                                 AS "secondHybridParentName",
+                ELSE NULL END                                                                               AS "secondHybridParentName",
             CASE
                 WHEN secondHybridParent.id IS NOT NULL
                     THEN tree.host_name || '/' || secondHybridParent.uri
-                ELSE NULL END                                                                                 AS "secondHybridParentNameID",
+                ELSE NULL END                                                                               AS "secondHybridParentNameID",
             -- boiler plate stuff at the end of the record
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            syn ->> 'instance_link'                                                                         AS "ccAttributionIRI"
+            tree.host_name || '/' || syn ->> 'instance_link'                                                AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
@@ -401,12 +408,12 @@ CREATE MATERIALIZED VIEW taxon_view AS
             CASE
                 WHEN acc_ns.name NOT IN ('legitimate', '[default]')
                     THEN acc_ns.name
-                ELSE NULL END                                                                                 AS "nomenclaturalStatus",
+                ELSE NULL END                                                                               AS "nomenclaturalStatus",
             CASE
                 WHEN te.excluded
                     THEN 'excluded'
                 ELSE 'accepted'
-                END                                                                                           AS "taxonomicStatus",
+                END                                                                                         AS "taxonomicStatus",
             FALSE                                                                                           AS "proParte",
             acc_name.full_name                                                                              AS "scientificName",
             te.name_link                                                                                    AS "scientificNameID",
@@ -414,48 +421,56 @@ CREATE MATERIALIZED VIEW taxon_view AS
             CASE
                 WHEN acc_nt.autonym
                     THEN NULL
-                ELSE regexp_replace(substring(acc_name.full_name_html FROM '<authors>(.*)</authors>'), '<[^>]*>', '', 'g')
-                END                                                                                           AS "scientificNameAuthorship",
+                ELSE regexp_replace(substring(acc_name.full_name_html FROM '<authors>(.*)</authors>'), '<[^>]*>', '',
+                                    'g')
+                END                                                                                         AS "scientificNameAuthorship",
             tree.host_name || tve.parent_id                                                                 AS "parentNameUsageID",
             te.rank                                                                                         AS "taxonRank",
             acc_rank.sort_order                                                                             AS "taxonRankSortOrder",
-            (SELECT name_element FROM find_tree_rank(tve.element_link, 10) ORDER BY sort_order ASC LIMIT 1) AS "kingdom",
+            (SELECT name_element
+             FROM find_tree_rank(tve.element_link, 10)
+             ORDER BY sort_order ASC
+             LIMIT 1)                                                                                       AS "kingdom",
             -- the below works but is a little slow
             -- find another efficient way to do it.
             (SELECT name_element FROM find_tree_rank(tve.element_link, 30) ORDER BY sort_order ASC LIMIT 1) AS "class",
-            (SELECT name_element FROM find_tree_rank(tve.element_link, 40) ORDER BY sort_order ASC LIMIT 1) AS "subclass",
+            (SELECT name_element
+             FROM find_tree_rank(tve.element_link, 40)
+             ORDER BY sort_order ASC
+             LIMIT 1)                                                                                       AS "subclass",
             (SELECT name_element FROM find_tree_rank(tve.element_link, 80) ORDER BY sort_order ASC LIMIT 1) AS "family",
             acc_name.created_at                                                                             AS "created",
             acc_name.updated_at                                                                             AS "modified",
             tree.name                                                                                       AS "datasetName",
             te.instance_link                                                                                AS "taxonConceptID",
             acc_ref.citation                                                                                AS "nameAccordingTo",
-            tree.host_name || '/reference/' || lower(name_space.value)|| '/' || acc_ref.id                         AS "nameAccordingToID",
-            profile -> 'APC Comment' ->> 'value'                                                            AS "taxonRemarks",
-            profile -> 'APC Dist.' ->> 'value'                                                              AS "taxonDistribution",
+            tree.host_name || '/reference/' || lower(name_space.value) || '/' ||
+            acc_ref.id                                                                                      AS "nameAccordingToID",
+            profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
+            profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
             regexp_replace(tve.name_path, '/', '|', 'g')                                                    AS "higherClassification",
             CASE
                 WHEN firstHybridParent.id IS NOT NULL
                     THEN firstHybridParent.full_name
-                ELSE NULL END                                                                                 AS "firstHybridParentName",
+                ELSE NULL END                                                                               AS "firstHybridParentName",
             CASE
                 WHEN firstHybridParent.id IS NOT NULL
                     THEN tree.host_name || '/' || firstHybridParent.uri
-                ELSE NULL END                                                                                 AS "firstHybridParentNameID",
+                ELSE NULL END                                                                               AS "firstHybridParentNameID",
             CASE
                 WHEN secondHybridParent.id IS NOT NULL
                     THEN secondHybridParent.full_name
-                ELSE NULL END                                                                                 AS "secondHybridParentName",
+                ELSE NULL END                                                                               AS "secondHybridParentName",
             CASE
                 WHEN secondHybridParent.id IS NOT NULL
                     THEN tree.host_name || '/' || secondHybridParent.uri
-                ELSE NULL END                                                                                 AS "secondHybridParentNameID",
+                ELSE NULL END                                                                               AS "secondHybridParentNameID",
             -- boiler plate stuff at the end of the record
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            tve.element_link                                                                                AS "ccAttributionIRI"
+            tree.host_name || tve.element_link                                                              AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
@@ -487,7 +502,7 @@ comment on column taxon_view."scientificNameAuthorship" is 'Authorship of the na
 comment on column taxon_view."parentNameUsageID" is 'The identifying URI of the parent taxon for accepted names in the classification.';
 comment on column taxon_view."taxonRank" is 'The taxonomic rank of the scientificName.';
 comment on column taxon_view."taxonRankSortOrder" is 'A sort order that can be applied to the rank.';
-comment on column taxon_view.kindom is 'The canonical name of the kingdom based on this classification.';
+comment on column taxon_view.kingdom is 'The canonical name of the kingdom based on this classification.';
 comment on column taxon_view.class is 'The canonical name of the class based on this classification.';
 comment on column taxon_view.subclass is 'The canonical name of the subclass based on this classification.';
 comment on column taxon_view.family is 'The canonical name of the family based on this classification.';
@@ -504,9 +519,9 @@ comment on column taxon_view."firstHybridParentName" is 'The scientificName for 
 comment on column taxon_view."firstHybridParentNameID" is 'The identifying URI the scientificName for the first hybrid parent.';
 comment on column taxon_view."secondHybridParentName" is 'The scientificName for the second hybrid parent. For hybrids.';
 comment on column taxon_view."secondHybridParentNameID" is 'The identifying URI the scientificName for the second hybrid parent.';
-comment on column taxon_view."nomenclaturalCode" is ' The nomenclatural code under which this name is constructed.';
-comment on column taxon_view.license is ' The license by which this data is being made available.';
-comment on column taxon_view."ccAttributionIRI " is 'The attribution to be used when citing this concept.';
+comment on column taxon_view."nomenclaturalCode" is 'The nomenclatural code under which this name is constructed.';
+comment on column taxon_view.license is 'The license by which this data is being made available.';
+comment on column taxon_view."ccAttributionIRI" is 'The attribution to be used when citing this concept.';
 
 -- version
 UPDATE db_version
