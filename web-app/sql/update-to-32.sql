@@ -139,7 +139,7 @@ select case
            when status.status = 'native' then
                ''
            else
-                   '(' || status.status || ')'
+               '(' || status.status || ')'
            end
 from status;
 $$;
@@ -154,7 +154,7 @@ from (SELECT case
                  when status = '' then
                      dr.name
                  else
-                         dr.name || ' ' || status
+                     dr.name || ' ' || status
                  end as entry
       FROM dist_entry de
                join dist_region dr on de.region_id = dr.id,
@@ -382,7 +382,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            tree.host_name || '/' || syn ->> 'instance_link'                                                AS "ccAttributionIRI"
+            tree.host_name || '/' || (syn ->> 'instance_link')                                              AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
