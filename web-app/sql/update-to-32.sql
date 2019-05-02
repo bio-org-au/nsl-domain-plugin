@@ -277,6 +277,10 @@ update tree_element
 set synonyms = regexp_replace(synonyms ::text, '"host": "id.biodiversity.org.au"', '"host": "https://id.biodiversity.org.au"', 'g') :: JSONB
 where (synonyms :: text) ~ '"host": "id.biodiversity.org.au"';
 
+update tree_element
+set synonyms = regexp_replace(synonyms ::text, '_link": "([^/])', '_link": "/\1', 'g') :: JSONB
+where (synonyms :: text) ~ '_link": "[^/]';
+
 DROP MATERIALIZED VIEW IF EXISTS taxon_view;
 
 -- taxon-view uses this function
