@@ -69,10 +69,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -459,8 +459,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -1160,14 +1160,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1882,7 +1882,7 @@ $$;
 CREATE MATERIALIZED VIEW taxon_view AS
 
     -- synonyms bit
-    (SELECT tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonID",
+    (SELECT (syn ->> 'host') || (syn ->> 'concept_link')                                                      AS "taxonID",
             acc_nt.name                                                                                     AS "nameType",
             tree.host_name || tve.element_link                                                              AS "acceptedNameUsageID",
             acc_name.full_name                                                                              AS "acceptedNameUsage",
@@ -1890,10 +1890,10 @@ CREATE MATERIALIZED VIEW taxon_view AS
                 WHEN acc_ns.name NOT IN ('legitimate', '[default]')
                     THEN acc_ns.name
                 ELSE NULL END                                                                               AS "nomenclaturalStatus",
-            syn ->> 'type'                                                                                  AS "taxonomicStatus",
+            (syn ->> 'type')                                                                                AS "taxonomicStatus",
             (syn ->> 'type' ~ 'parte')                                                                      AS "proParte",
             syn_name.full_name                                                                              AS "scientificName",
-            tree.host_name || '/' || (syn ->> 'name_link')                                                  AS "scientificNameID",
+            (syn ->> 'host') || (syn ->> 'name_link')                                                       AS "scientificNameID",
             syn_name.simple_name                                                                            AS "canonicalName",
             CASE
                 WHEN syn_nt.autonym
@@ -1920,9 +1920,9 @@ CREATE MATERIALIZED VIEW taxon_view AS
             syn_name.created_at                                                                             AS "created",
             syn_name.updated_at                                                                             AS "modified",
             tree.name                                                                                       AS "datasetName",
-            tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonConceptID",
+            (syn ->> 'host') || (syn ->> 'concept_link')                                                    AS "taxonConceptID",
             (syn ->> 'cites')                                                                               AS "nameAccordingTo",
-            tree.host_name || (syn ->> 'cites_link')                                                        AS "nameAccordingToID",
+            (syn ->> 'host') || (syn ->> 'cites_link')                                                      AS "nameAccordingToID",
             profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
             profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
@@ -1947,7 +1947,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            tree.host_name || '/' || (syn ->> 'instance_link')                                              AS "ccAttributionIRI"
+            (syn ->> 'host') || (syn ->> 'instance_link')                                                   AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id

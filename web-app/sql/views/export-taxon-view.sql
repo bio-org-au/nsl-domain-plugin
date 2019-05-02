@@ -48,7 +48,7 @@ $$;
 CREATE MATERIALIZED VIEW taxon_view AS
 
     -- synonyms bit
-    (SELECT tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonID",
+    (SELECT (syn ->> 'host') || (syn ->> 'concept_link')                                                      AS "taxonID",
             acc_nt.name                                                                                     AS "nameType",
             tree.host_name || tve.element_link                                                              AS "acceptedNameUsageID",
             acc_name.full_name                                                                              AS "acceptedNameUsage",
@@ -56,10 +56,10 @@ CREATE MATERIALIZED VIEW taxon_view AS
                 WHEN acc_ns.name NOT IN ('legitimate', '[default]')
                     THEN acc_ns.name
                 ELSE NULL END                                                                               AS "nomenclaturalStatus",
-            syn ->> 'type'                                                                                  AS "taxonomicStatus",
+            (syn ->> 'type')                                                                                AS "taxonomicStatus",
             (syn ->> 'type' ~ 'parte')                                                                      AS "proParte",
             syn_name.full_name                                                                              AS "scientificName",
-            tree.host_name || '/' || (syn ->> 'name_link')                                                  AS "scientificNameID",
+            (syn ->> 'host') || (syn ->> 'name_link')                                                       AS "scientificNameID",
             syn_name.simple_name                                                                            AS "canonicalName",
             CASE
                 WHEN syn_nt.autonym
@@ -86,9 +86,9 @@ CREATE MATERIALIZED VIEW taxon_view AS
             syn_name.created_at                                                                             AS "created",
             syn_name.updated_at                                                                             AS "modified",
             tree.name                                                                                       AS "datasetName",
-            tree.host_name || '/' || (syn ->> 'concept_link')                                               AS "taxonConceptID",
+            (syn ->> 'host') || (syn ->> 'concept_link')                                                    AS "taxonConceptID",
             (syn ->> 'cites')                                                                               AS "nameAccordingTo",
-            tree.host_name || (syn ->> 'cites_link')                                                        AS "nameAccordingToID",
+            (syn ->> 'host') || (syn ->> 'cites_link')                                                      AS "nameAccordingToID",
             profile -> (tree.config ->> 'comment_key') ->> 'value'                                          AS "taxonRemarks",
             profile -> (tree.config ->> 'distribution_key') ->> 'value'                                     AS "taxonDistribution",
             -- todo check this is ok for synonyms
@@ -113,7 +113,7 @@ CREATE MATERIALIZED VIEW taxon_view AS
             (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
                              'ICN')) :: TEXT                                                                AS "nomenclaturalCode",
             'http://creativecommons.org/licenses/by/3.0/' :: TEXT                                           AS "license",
-            tree.host_name || '/' || (syn ->> 'instance_link')                                              AS "ccAttributionIRI"
+            (syn ->> 'host') || (syn ->> 'instance_link')                                                   AS "ccAttributionIRI"
      FROM tree_version_element tve
               JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
               JOIN tree_element te ON tve.tree_element_id = te.id
