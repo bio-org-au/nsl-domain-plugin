@@ -523,6 +523,8 @@ comment on column taxon_view."nomenclaturalCode" is 'The nomenclatural code unde
 comment on column taxon_view.license is 'The license by which this data is being made available.';
 comment on column taxon_view."ccAttributionIRI" is 'The attribution to be used when citing this concept.';
 
+GRANT SELECT ON taxon_view to ${webUserName};
+
 -- version
 UPDATE db_version
 SET version = 32
