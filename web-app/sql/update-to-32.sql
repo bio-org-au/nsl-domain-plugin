@@ -233,7 +233,7 @@ insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id 
 
 -- add each status to created entries
 
-    -- turn naturalised into a reg ex that excludeds doubtfully and formerly
+-- turn naturalised into a reg ex that excludeds doubtfully and formerly
 update dist_status set name = '[^y][ ,(]naturalised' where name = 'naturalised';
 insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.WA ~* ds.name where  dr.name = 'WA';
 insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.CoI ~* ds.name where  dr.name = 'CoI';
@@ -265,6 +265,31 @@ from dist_entry de
      dist_status ds
 where deds is null
   and ds.name = 'native';
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+(SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'doubfully naturalised' and comb.name = 'native');
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'formerly naturalised' and comb.name = 'native');
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'native');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'uncertain origin');
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'formerly naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'doubtfully naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'uncertain origin' and comb.name = 'native');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'uncertain origin' and comb.name = 'naturalised');
 
 -- NSL-3284 fix kingdom and ccAttributionIRI field names in taxon export
 
