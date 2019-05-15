@@ -267,14 +267,6 @@ where deds is null
   and ds.name = 'native';
 
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-(SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'doubfully naturalised' and comb.name = 'native');
-
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'formerly naturalised' and comb.name = 'native');
-
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'native');
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'uncertain origin');
 
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
@@ -285,11 +277,6 @@ insert into dist_status_dist_status (dist_status_combining_status_id, dist_statu
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'doubtfully naturalised');
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
-
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'uncertain origin' and comb.name = 'native');
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'uncertain origin' and comb.name = 'naturalised');
 
 -- NSL-3284 fix kingdom and ccAttributionIRI field names in taxon export
 
