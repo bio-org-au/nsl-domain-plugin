@@ -115,7 +115,18 @@ INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VA
 </ul>', null, 'naturalised', 1);
 INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('“taxa that have originated in a given area without human involvement or that have arrived there without intentional or unintentional intervention of humans from an area in which they are native” (definition from Pysek et al. (2004)).', null, 'native', 0);
 INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('For some taxa there is uncertainty as to whether the populations present in a given jurisdiction represent native or naturalised plants or a combination of the two former categories. In these cases, the jurisdiction is listed with the parenthetical qualifier “(uncertain origin)”. Comment fields may be added under the APC reference to indicate the nature of this uncertainty.', null, 'uncertain origin', 5);
-INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('plant names may be excluded from the Australian Plant Census for a variety of reasons, including taxonomic change, insufficient information to identify the taxon, and erroneous reports. Introduced taxa may be excluded on the basis of their distribution when they have recorded as occurring within a given jurisdiction but there is no evidence of their occurrence or establishment. This includes taxa that may have been reported as naturalised but that are subsequently determined to be present only in cultivation.', null, 'Excluded', 6);
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'uncertain origin');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'formerly naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'doubtfully naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
+
 
 -- functions to construct display distribution string from the DB
 
@@ -265,18 +276,6 @@ from dist_entry de
      dist_status ds
 where deds is null
   and ds.name = 'native';
-
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'uncertain origin');
-
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'naturalised');
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'formerly naturalised');
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'doubtfully naturalised');
-insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
-    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
 
 -- NSL-3284 fix kingdom and ccAttributionIRI field names in taxon export
 
