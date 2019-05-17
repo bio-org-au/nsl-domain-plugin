@@ -20,9 +20,6 @@
     alter table if exists dist_entry 
         drop constraint if exists FK_ffleu7615efcrsst8l64wvomw;
 
-    alter table if exists dist_entry 
-        drop constraint if exists FK_d9a9gcy3hbk8s5slosux1k5uc;
-
     alter table if exists dist_entry_dist_status 
         drop constraint if exists FK_jnh4hl7ev54cknuwm5juvb22i;
 
@@ -69,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -179,6 +176,12 @@
     alter table if exists tree_element 
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
+    alter table if exists tree_element_distribution_entries 
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+
+    alter table if exists tree_element_distribution_entries 
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
 
@@ -268,6 +271,8 @@
 
     drop table if exists tree_element cascade;
 
+    drop table if exists tree_element_distribution_entries cascade;
+
     drop table if exists tree_version cascade;
 
     drop table if exists tree_version_element cascade;
@@ -342,8 +347,8 @@
     create table dist_entry (
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
+        display varchar(255) not null,
         region_id int8 not null,
-        tree_element_id int8 not null,
         primary key (id)
     );
 
@@ -459,8 +464,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -825,6 +830,12 @@
         primary key (id)
     );
 
+    create table tree_element_distribution_entries (
+        tree_element_id int8 not null,
+        dist_entry_id int8 not null,
+        primary key (tree_element_id, dist_entry_id)
+    );
+
     create table tree_version (
         id int8 default nextval('nsl_global_seq') not null,
         lock_version int8 default 0 not null,
@@ -876,8 +887,6 @@
     create index Comment_name_Index on comment (name_id);
 
     create index Comment_reference_Index on comment (reference_id);
-
-    create index de_tree_element on dist_entry (tree_element_id);
 
     alter table if exists dist_region 
         add constraint UK_dtx2gm3sr51pk6b0fysp1ij9r  unique (name);
@@ -1079,11 +1088,6 @@
         foreign key (region_id) 
         references dist_region;
 
-    alter table if exists dist_entry 
-        add constraint FK_d9a9gcy3hbk8s5slosux1k5uc 
-        foreign key (tree_element_id) 
-        references tree_element;
-
     alter table if exists dist_entry_dist_status 
         add constraint FK_jnh4hl7ev54cknuwm5juvb22i 
         foreign key (dist_status_id) 
@@ -1160,14 +1164,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1342,6 +1346,16 @@
     alter table if exists tree_element 
         add constraint FK_5sv181ivf7oybb6hud16ptmo5 
         foreign key (previous_element_id) 
+        references tree_element;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_h7k45ugqa75w0860tysr4fgrt 
+        foreign key (dist_entry_id) 
+        references dist_entry;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
+        foreign key (tree_element_id) 
         references tree_element;
 
     alter table if exists tree_version 

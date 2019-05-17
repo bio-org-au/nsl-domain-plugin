@@ -1,5 +1,6 @@
 drop table if exists distribution;
 
+drop table if exists tree_element_distribution_entries;
 drop table if exists dist_entry_dist_status;
 drop table if exists dist_status_dist_status;
 drop table if exists dist_entry cascade;
@@ -11,7 +12,7 @@ create table dist_entry
     id              int8 default nextval('nsl_global_seq') not null,
     lock_version    int8 default 0                         not null,
     region_id       int8                                   not null,
-    tree_element_id int8                                   not null,
+    display varchar(255)                                   not null,
     primary key (id)
 );
 
@@ -51,15 +52,17 @@ create table dist_status_dist_status
     dist_status_id                  int8
 );
 
+create table tree_element_distribution_entries
+(
+    dist_entry_id   int8 not null,
+    tree_element_id int8 not null,
+    primary key (tree_element_id, dist_entry_id)
+);
+
 alter table if exists dist_entry
     add constraint FK_ffleu7615efcrsst8l64wvomw
         foreign key (region_id)
             references dist_region;
-
-alter table if exists dist_entry
-    add constraint FK_d9a9gcy3hbk8s5slosux1k5uc
-        foreign key (tree_element_id)
-            references tree_element;
 
 alter table if exists dist_entry_dist_status
     add constraint FK_jnh4hl7ev54cknuwm5juvb22i
@@ -81,8 +84,15 @@ alter table if exists dist_status_dist_status
         foreign key (dist_status_combining_status_id)
             references dist_status;
 
-alter table dist_entry
-    add constraint de_unique_region unique (region_id, tree_element_id);
+alter table if exists tree_element_distribution_entries
+    add constraint FK_fmic32f9o0fplk3xdix1yu6ha
+        foreign key (tree_element_id)
+            references tree_element;
+
+alter table if exists tree_element_distribution_entries
+    add constraint FK_h7k45ugqa75w0860tysr4fgrt
+        foreign key (dist_entry_id)
+            references dist_entry;
 
 -- set up APC regions
 INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Western Australia', null, 'WA', 1);
@@ -127,6 +137,39 @@ insert into dist_status_dist_status (dist_status_combining_status_id, dist_statu
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
 
+-- make all the combinations of distribution entries we can make
+drop function if exists make_entries();
+create function make_entries() returns integer as
+$$
+declare
+    entry_id  bigint;
+    region record;
+    status record;
+    comb_status record;
+    display_str text;
+begin
+    for region in select * from dist_region
+        loop
+            for status in select * from dist_status order by sort_order
+                loop
+                    display_str := region.name || ' (' || status.name ||')';
+                    insert into dist_entry (region_id, display) values (region.id, display_str) returning id into entry_id;
+                    insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, status.id);
+                    for comb_status in select ds.* from dist_status_dist_status dsds join dist_status ds on ds.id = dsds.dist_status_combining_status_id and dsds.dist_status_id = status.id order by ds.sort_order loop
+                        display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')' ;
+                        insert into dist_entry (region_id, display) values (region.id, display_str) returning id into entry_id;
+                        insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, status.id);
+                        insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, comb_status.id);
+                    end loop;
+                end loop;
+        end loop;
+    return (select count(*) from dist_entry);
+end;
+$$ LANGUAGE plpgsql;
+
+select make_entries();
+
+update dist_entry e set display = (select r.name from dist_region r where r.id = e.region_id) where display ~ '\(native\)';
 
 -- functions to construct display distribution string from the DB
 
@@ -150,7 +193,7 @@ select case
            when status.status = 'native' then
                ''
            else
-               '(' || status.status || ')'
+                       '(' || status.status || ')'
            end
 from status;
 $$;
@@ -160,19 +203,13 @@ create function distribution(element_id BIGINT)
     returns text
     language sql as
 $$
-select string_agg(entries.entry, ', ')
-from (SELECT case
-                 when status = '' then
-                     dr.name
-                 else
-                     dr.name || ' ' || status
-                 end as entry
-      FROM dist_entry de
-               join dist_region dr on de.region_id = dr.id,
-           dist_entry_status(de.id) status
-      where de.tree_element_id = element_id
-      order by dr.sort_order
-     ) entries
+select string_agg(e.display, ', ') from
+    (select entry.display display
+     from dist_entry entry
+              join dist_region dr on entry.region_id = dr.id
+              join tree_element_distribution_entries tede
+                   on tede.dist_entry_id = entry.id and tede.tree_element_id = element_id
+     order by dr.sort_order) e
 $$;
 
 -- import existing data
@@ -223,59 +260,27 @@ FROM tree_element te,
      regexp_replace(profile.dist_value, E'[\\n\\r\\u2028]+', ' ', 'g') AS dist;
 
 -- create a dist entry with region for each existing distribution
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.WA is not null and region.name = 'WA';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.CoI is not null and region.name = 'CoI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.ChI is not null and region.name = 'ChI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.AR is not null and region.name = 'AR';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.CaI is not null and region.name = 'CaI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.NT is not null and region.name = 'NT';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.SA is not null and region.name = 'SA';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.Qld is not null and region.name = 'Qld';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.CSI is not null and region.name = 'CSI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.NSW is not null and region.name = 'NSW';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.LHI is not null and region.name = 'LHI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.NI is not null and region.name = 'NI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.ACT is not null and region.name = 'ACT';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.Vic is not null and region.name = 'Vic';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.Tas is not null and region.name = 'Tas';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.HI is not null and region.name = 'HI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.MDI is not null and region.name = 'MDI';
-insert into dist_entry (region_id, tree_element_id) select region.id, apc_te_id from tmp_distribution dist, dist_region region where dist.MI is not null and region.name = 'MI';
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id) select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.WA = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.CoI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.ChI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.AR = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.CaI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.NT = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.SA = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.Qld = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.CSI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.NSW = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.LHI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.NI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.ACT = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.Vic = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.Tas = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.HI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.MDI = entry.display;
+insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.MI = entry.display;
 
--- add each status to created entries
-
--- turn naturalised into a reg ex that excludeds doubtfully and formerly
-update dist_status set name = '[^y][ ,(]naturalised' where name = 'naturalised';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.WA ~* ds.name where  dr.name = 'WA';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.CoI ~* ds.name where  dr.name = 'CoI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.ChI ~* ds.name where  dr.name = 'ChI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.AR ~* ds.name where  dr.name = 'AR';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.CaI ~* ds.name where  dr.name = 'CaI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.NT ~* ds.name where  dr.name = 'NT';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.SA ~* ds.name where  dr.name = 'SA';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.Qld ~* ds.name where  dr.name = 'Qld';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.CSI ~* ds.name where  dr.name = 'CSI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.NSW ~* ds.name where  dr.name = 'NSW';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.LHI ~* ds.name where  dr.name = 'LHI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.NI ~* ds.name where  dr.name = 'NI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.ACT ~* ds.name where  dr.name = 'ACT';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.Vic ~* ds.name where  dr.name = 'Vic';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.Tas ~* ds.name where  dr.name = 'Tas';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.HI ~* ds.name where  dr.name = 'HI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.MDI ~* ds.name where  dr.name = 'MDI';
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) select de.id, ds.id from dist_entry de join dist_region dr on de.region_id = dr.id join tmp_distribution dist on de.tree_element_id = dist.apc_te_id join dist_status ds on dist.MI ~* ds.name where  dr.name = 'MI';
--- set naturalised back to what it should be
-update dist_status set name = 'naturalised' where name = '[^y][ ,(]naturalised';
-
--- insert the default native status where there is no status for an entry
-insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
-select de.id, ds.id
-from dist_entry de
-         join dist_region dr on de.region_id = dr.id
-         left outer join dist_entry_dist_status deds on de.id = deds.dist_entry_status_id,
-     dist_status ds
-where deds is null
-  and ds.name = 'native';
+-- to find the differences:
+-- select te.id, te.simple_name, (profile -> 'APC Dist.' ->> 'value'), distribution(te.id) from tree_element te where (profile -> 'APC Dist.' ->> 'value') <> distribution(te.id);
 
 -- NSL-3284 fix kingdom and ccAttributionIRI field names in taxon export
 

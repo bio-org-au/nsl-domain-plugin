@@ -21,20 +21,20 @@ import groovy.transform.ToString
 class DistEntry {
 
     DistRegion region
-    TreeElement treeElement
+    String display
 
     static hasMany = [
-            status: DistStatus
+            status: DistStatus,
+            treeElements: TreeElement
     ]
 
-//    static belongsTo = [ TreeElement ]
+    static belongsTo = [ TreeElement ]
 
     static mapping = {
         datasource 'nsl'
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
-        treeElement index: 'de_tree_element'
     }
 
     static constraints = {
@@ -44,9 +44,9 @@ class DistEntry {
         if (this.is(o)) return true
         if (getClass() != o.class) return false
 
-        DistEntry nameStatus = (DistEntry) o
+        DistEntry distEntry = (DistEntry) o
 
-        return (id == nameStatus.id)
+        return (id == distEntry.id)
     }
 
     int hashCode() {
