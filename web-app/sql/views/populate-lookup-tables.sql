@@ -630,3 +630,49 @@ insert into dist_status_dist_status (dist_status_combining_status_id, dist_statu
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
 
+drop function if exists make_entries();
+create function make_entries() returns integer as
+$$
+declare
+    entry_id    bigint;
+    region      record;
+    status      record;
+    comb_status record;
+    display_str text;
+    entry_order integer;
+begin
+    entry_order := 0;
+    for region in select * from dist_region order by sort_order
+        loop
+            for status in select * from dist_status order by sort_order
+                loop
+                    entry_order := entry_order + 1;
+                    display_str := region.name || ' (' || status.name || ')';
+                    insert into dist_entry (region_id, display, sort_order)
+                    values (region.id, display_str, entry_order) returning id into entry_id;
+                    insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                    values (entry_id, status.id);
+                    for comb_status in select ds.*
+                                       from dist_status_dist_status dsds
+                                                join dist_status ds on ds.id = dsds.dist_status_combining_status_id and
+                                                                       dsds.dist_status_id = status.id
+                                       order by ds.sort_order
+                        loop
+                            entry_order := entry_order + 1;
+                            display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')';
+                            insert into dist_entry (region_id, display, sort_order)
+                            values (region.id, display_str, entry_order) returning id into entry_id;
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, status.id);
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, comb_status.id);
+                        end loop;
+                end loop;
+        end loop;
+    return (select count(*) from dist_entry);
+end;
+$$ LANGUAGE plpgsql;
+
+select make_entries();
+
+update dist_entry e set display = (select r.name from dist_region r where r.id = e.region_id) where display ~ '\(native\)';

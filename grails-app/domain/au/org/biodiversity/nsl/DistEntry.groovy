@@ -22,6 +22,7 @@ class DistEntry {
 
     DistRegion region
     String display
+    Integer sortOrder
 
     static hasMany = [
             status: DistStatus,
@@ -35,6 +36,7 @@ class DistEntry {
 
         id generator: 'native', params: [sequence: 'nsl_global_seq'], defaultValue: "nextval('nsl_global_seq')"
         version column: 'lock_version', defaultValue: "0"
+        sortOrder defaultValue: "0"
     }
 
     static constraints = {

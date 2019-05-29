@@ -9,10 +9,11 @@ drop table if exists dist_status cascade;
 
 create table dist_entry
 (
-    id              int8 default nextval('nsl_global_seq') not null,
-    lock_version    int8 default 0                         not null,
-    region_id       int8                                   not null,
-    display varchar(255)                                   not null,
+    id           int8 default nextval('nsl_global_seq') not null,
+    lock_version int8 default 0                         not null,
+    display      varchar(255)                           not null,
+    region_id    int8                                   not null,
+    sort_order   int4 default 0                         not null,
     primary key (id)
 );
 
@@ -142,25 +143,39 @@ drop function if exists make_entries();
 create function make_entries() returns integer as
 $$
 declare
-    entry_id  bigint;
-    region record;
-    status record;
+    entry_id    bigint;
+    region      record;
+    status      record;
     comb_status record;
     display_str text;
+    entry_order integer;
 begin
-    for region in select * from dist_region
+    entry_order := 0;
+    for region in select * from dist_region order by sort_order
         loop
             for status in select * from dist_status order by sort_order
                 loop
-                    display_str := region.name || ' (' || status.name ||')';
-                    insert into dist_entry (region_id, display) values (region.id, display_str) returning id into entry_id;
-                    insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, status.id);
-                    for comb_status in select ds.* from dist_status_dist_status dsds join dist_status ds on ds.id = dsds.dist_status_combining_status_id and dsds.dist_status_id = status.id order by ds.sort_order loop
-                        display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')' ;
-                        insert into dist_entry (region_id, display) values (region.id, display_str) returning id into entry_id;
-                        insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, status.id);
-                        insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id) values (entry_id, comb_status.id);
-                    end loop;
+                    entry_order := entry_order + 1;
+                    display_str := region.name || ' (' || status.name || ')';
+                    insert into dist_entry (region_id, display, sort_order)
+                    values (region.id, display_str, entry_order) returning id into entry_id;
+                    insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                    values (entry_id, status.id);
+                    for comb_status in select ds.*
+                                       from dist_status_dist_status dsds
+                                                join dist_status ds on ds.id = dsds.dist_status_combining_status_id and
+                                                                       dsds.dist_status_id = status.id
+                                       order by ds.sort_order
+                        loop
+                            entry_order := entry_order + 1;
+                            display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')';
+                            insert into dist_entry (region_id, display, sort_order)
+                            values (region.id, display_str, entry_order) returning id into entry_id;
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, status.id);
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, comb_status.id);
+                        end loop;
                 end loop;
         end loop;
     return (select count(*) from dist_entry);
