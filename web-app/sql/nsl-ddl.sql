@@ -177,10 +177,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -832,8 +832,8 @@
     );
 
     create table tree_element_distribution_entries (
-        tree_element_id int8 not null,
         dist_entry_id int8 not null,
+        tree_element_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1350,14 +1350,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_h7k45ugqa75w0860tysr4fgrt 
-        foreign key (dist_entry_id) 
-        references dist_entry;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
         foreign key (tree_element_id) 
         references tree_element;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_h7k45ugqa75w0860tysr4fgrt 
+        foreign key (dist_entry_id) 
+        references dist_entry;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -4005,6 +4005,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON tree TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version_element TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_region TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;

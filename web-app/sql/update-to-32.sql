@@ -294,6 +294,13 @@ insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  
 insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.MDI = entry.display;
 insert into tree_element_distribution_entries (dist_entry_id, tree_element_id)  select entry.id, apc_te_id from tmp_distribution dist, dist_entry entry where dist.MI = entry.display;
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry TO ${webUserName};
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_region TO ${webUserName};
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO ${webUserName};
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO ${webUserName};
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO ${webUserName};
+GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO ${webUserName};
+
 -- to find the differences:
 -- select te.id, te.simple_name, (profile -> 'APC Dist.' ->> 'value'), distribution(te.id) from tree_element te where (profile -> 'APC Dist.' ->> 'value') <> distribution(te.id);
 
