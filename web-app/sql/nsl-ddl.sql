@@ -66,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -177,10 +177,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -465,8 +465,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -832,8 +832,8 @@
     );
 
     create table tree_element_distribution_entries (
-        dist_entry_id int8 not null,
         tree_element_id int8 not null,
+        dist_entry_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1165,14 +1165,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1350,14 +1350,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
-        foreign key (tree_element_id) 
-        references tree_element;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_h7k45ugqa75w0860tysr4fgrt 
         foreign key (dist_entry_id) 
         references dist_entry;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
+        foreign key (tree_element_id) 
+        references tree_element;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -3536,6 +3536,30 @@ insert into dist_status_dist_status (dist_status_combining_status_id, dist_statu
 insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
     (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
 
+drop table if exists temp_comb_status_order;
+
+create table temp_comb_status_order
+(
+    name             varchar(255)                              not null,
+    sort_order       int4    default 0                         not null,
+    primary key (name)
+);
+
+insert into temp_comb_status_order (name, sort_order) VALUES
+('(native)', 0),
+('(naturalised)', 1),
+('(native and naturalised)', 2),
+('(native and doubtfully naturalised)', 3),
+('(native and formerly naturalised)', 4),
+('(native and uncertain origin)', 5),
+('(doubtfully naturalised)', 6),
+('(formerly naturalised)', 7),
+('(naturalised and uncertain origin)', 8),
+('(uncertain origin)', 9),
+('(presumed extinct)', 10)
+;
+
+-- make all the combinations of distribution entries we can make
 drop function if exists make_entries();
 create function make_entries() returns integer as
 $$
@@ -3552,8 +3576,8 @@ begin
         loop
             for status in select * from dist_status order by sort_order
                 loop
-                    entry_order := entry_order + 1;
                     display_str := region.name || ' (' || status.name || ')';
+                    entry_order := region.sort_order * 20 + (select sort_order from temp_comb_status_order where name = '(' || status.name || ')');
                     insert into dist_entry (region_id, display, sort_order)
                     values (region.id, display_str, entry_order) returning id into entry_id;
                     insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
@@ -3564,8 +3588,8 @@ begin
                                                                        dsds.dist_status_id = status.id
                                        order by ds.sort_order
                         loop
-                            entry_order := entry_order + 1;
                             display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')';
+                            entry_order := region.sort_order * 20 + (select sort_order from temp_comb_status_order where name = '(' || status.name || ' and ' || comb_status.name || ')');
                             insert into dist_entry (region_id, display, sort_order)
                             values (region.id, display_str, entry_order) returning id into entry_id;
                             insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
@@ -3580,6 +3604,8 @@ end;
 $$ LANGUAGE plpgsql;
 
 select make_entries();
+drop function make_entries();
+drop table temp_comb_status_order;
 
 update dist_entry e set display = (select r.name from dist_region r where r.id = e.region_id) where display ~ '\(native\)';
 
