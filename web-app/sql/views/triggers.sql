@@ -130,7 +130,7 @@ EXECUTE PROCEDURE reference_notification();
 
 -- Instance change trigger
 CREATE OR REPLACE FUNCTION instance_notification()
-  RETURNS TRIGGER AS $ref_note$
+  RETURNS TRIGGER AS $inst_note$
 BEGIN
   IF (TG_OP = 'DELETE')
   THEN
@@ -162,10 +162,14 @@ BEGIN
   END IF;
   RETURN NULL;
 END;
-$ref_note$ LANGUAGE plpgsql;
-
+$inst_note$ LANGUAGE plpgsql;
 
 CREATE TRIGGER instance_update
-  AFTER INSERT OR UPDATE OR DELETE ON instance
-  FOR EACH ROW
+    AFTER UPDATE OF cited_by_id ON instance
+    FOR EACH ROW
+EXECUTE PROCEDURE instance_notification();
+
+CREATE TRIGGER instance_insert_delete
+    AFTER INSERT OR DELETE ON instance
+    FOR EACH ROW
 EXECUTE PROCEDURE instance_notification();

@@ -177,10 +177,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -832,8 +832,8 @@
     );
 
     create table tree_element_distribution_entries (
-        tree_element_id int8 not null,
         dist_entry_id int8 not null,
+        tree_element_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1350,14 +1350,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_h7k45ugqa75w0860tysr4fgrt 
-        foreign key (dist_entry_id) 
-        references dist_entry;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
         foreign key (tree_element_id) 
         references tree_element;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_h7k45ugqa75w0860tysr4fgrt 
+        foreign key (dist_entry_id) 
+        references dist_entry;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -3957,7 +3957,7 @@ EXECUTE PROCEDURE reference_notification();
 
 -- Instance change trigger
 CREATE OR REPLACE FUNCTION instance_notification()
-  RETURNS TRIGGER AS $ref_note$
+  RETURNS TRIGGER AS $inst_note$
 BEGIN
   IF (TG_OP = 'DELETE')
   THEN
@@ -3989,14 +3989,17 @@ BEGIN
   END IF;
   RETURN NULL;
 END;
-$ref_note$ LANGUAGE plpgsql;
-
+$inst_note$ LANGUAGE plpgsql;
 
 CREATE TRIGGER instance_update
-  AFTER INSERT OR UPDATE OR DELETE ON instance
-  FOR EACH ROW
+    AFTER UPDATE OF cited_by_id ON instance
+    FOR EACH ROW
 EXECUTE PROCEDURE instance_notification();
 
+CREATE TRIGGER instance_insert_delete
+    AFTER INSERT OR DELETE ON instance
+    FOR EACH ROW
+EXECUTE PROCEDURE instance_notification();
 -- z-grants.sql
 -- grant to the web user as required
 GRANT SELECT, INSERT, UPDATE, DELETE ON id_mapper TO web;
