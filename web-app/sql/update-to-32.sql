@@ -602,6 +602,20 @@ comment on column taxon_view."ccAttributionIRI" is 'The attribution to be used w
 
 GRANT SELECT ON taxon_view to ${webUserName};
 
+drop trigger if exists instance_update on instance;
+CREATE TRIGGER instance_update
+    AFTER UPDATE OF cited_by_id ON instance
+    FOR EACH ROW
+EXECUTE PROCEDURE instance_notification();
+
+drop trigger if exists instance_insert_delete on instance;
+CREATE TRIGGER instance_insert_delete
+    AFTER INSERT OR DELETE ON instance
+    FOR EACH ROW
+EXECUTE PROCEDURE instance_notification();
+
+delete from notification;
+
 -- version
 UPDATE db_version
 SET version = 32
