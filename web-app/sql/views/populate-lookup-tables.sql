@@ -587,3 +587,118 @@ INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional,
 INSERT INTO public.ref_type (id, lock_version, name, parent_id, parent_optional, description_html, rdf_id) VALUES (nextval('nsl_global_seq'), 1, 'Unknown', null, true, '(description of <b>Unknown</b>)', 'unknown');
 UPDATE public.ref_type SET parent_id = id WHERE name = 'Unknown'; --self parent
 
+-- set up APC regions
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Western Australia', null, 'WA', 1);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Cocos (Keeling) Islands', null, 'CoI', 2);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Christmas Island', null, 'ChI', 3);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Ashmore Reef', null, 'AR', 4);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Cartier Island', null, 'CaI', 5);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Northern Territory', null, 'NT', 6);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('South Australia', null, 'SA', 7);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Queensland', null, 'Qld', 8);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Coral Sea Islands', null, 'CSI', 9);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('New South Wales', null, 'NSW', 10);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Lord Howe Island', null, 'LHI', 11);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Norfolk Island', null, 'NI', 12);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Australian Capital Australian Capital Territory excl. Jervis Bay', null, 'ACT', 13);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Victoria', null, 'Vic', 14);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Tasmainia', null, 'Tas', 15);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Heard Island', null, 'HI', 16);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('McDonald Island', null, 'MDI', 17);
+INSERT INTO public.dist_region (description_html, def_link, name, sort_order) VALUES ('Macquarie Island', null, 'MI', 18);
+
+-- set up APC statuses
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('a native taxon that no longer occurs in the given jurisdiction', null, 'presumed extinct', 4);
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('taxa that are represented by one or more naturalised populations in a given jurisdiction, but the extent of naturalisation is uncertain and populations may or may not persist in the longer term.', null, 'doubtfully naturalised', 3);
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('non-native or native taxa previously recorded as being naturalised in a given jurisdiction but of which no collections have been made within a defined timeframe.', null, 'formerly naturalised', 2);
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('<p>plant taxa in a given jurisdiction where:</p>
+<ul>
+    <li>a native taxon has become naturalised outside of its natural range within that jurisdiction, or;</li>
+    <li>a native or non-native taxon that did not originate in a given jurisdiction but has since arrived and become established there.</li>
+</ul>', null, 'naturalised', 1);
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('“taxa that have originated in a given area without human involvement or that have arrived there without intentional or unintentional intervention of humans from an area in which they are native” (definition from Pysek et al. (2004)).', null, 'native', 0);
+INSERT INTO public.dist_status (description_html, def_link, name, sort_order) VALUES ('For some taxa there is uncertainty as to whether the populations present in a given jurisdiction represent native or naturalised plants or a combination of the two former categories. In these cases, the jurisdiction is listed with the parenthetical qualifier “(uncertain origin)”. Comment fields may be added under the APC reference to indicate the nature of this uncertainty.', null, 'uncertain origin', 5);
+
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'naturalised' and comb.name = 'uncertain origin');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'formerly naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'doubtfully naturalised');
+insert into dist_status_dist_status (dist_status_combining_status_id, dist_status_id)
+    (SELECT comb.id, ds.id from dist_status ds, dist_status comb where ds.name = 'native' and comb.name = 'uncertain origin');
+
+drop table if exists temp_comb_status_order;
+
+create table temp_comb_status_order
+(
+    name             varchar(255)                              not null,
+    sort_order       int4    default 0                         not null,
+    primary key (name)
+);
+
+insert into temp_comb_status_order (name, sort_order) VALUES
+('(native)', 0),
+('(naturalised)', 1),
+('(native and naturalised)', 2),
+('(native and doubtfully naturalised)', 3),
+('(native and formerly naturalised)', 4),
+('(native and uncertain origin)', 5),
+('(doubtfully naturalised)', 6),
+('(formerly naturalised)', 7),
+('(naturalised and uncertain origin)', 8),
+('(uncertain origin)', 9),
+('(presumed extinct)', 10)
+;
+
+-- make all the combinations of distribution entries we can make
+drop function if exists make_entries();
+create function make_entries() returns integer as
+$$
+declare
+    entry_id    bigint;
+    region      record;
+    status      record;
+    comb_status record;
+    display_str text;
+    entry_order integer;
+begin
+    entry_order := 0;
+    for region in select * from dist_region order by sort_order
+        loop
+            for status in select * from dist_status order by sort_order
+                loop
+                    display_str := region.name || ' (' || status.name || ')';
+                    entry_order := region.sort_order * 20 + (select sort_order from temp_comb_status_order where name = '(' || status.name || ')');
+                    insert into dist_entry (region_id, display, sort_order)
+                    values (region.id, display_str, entry_order) returning id into entry_id;
+                    insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                    values (entry_id, status.id);
+                    for comb_status in select ds.*
+                                       from dist_status_dist_status dsds
+                                                join dist_status ds on ds.id = dsds.dist_status_combining_status_id and
+                                                                       dsds.dist_status_id = status.id
+                                       order by ds.sort_order
+                        loop
+                            display_str := region.name || ' (' || status.name || ' and ' || comb_status.name || ')';
+                            entry_order := region.sort_order * 20 + (select sort_order from temp_comb_status_order where name = '(' || status.name || ' and ' || comb_status.name || ')');
+                            insert into dist_entry (region_id, display, sort_order)
+                            values (region.id, display_str, entry_order) returning id into entry_id;
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, status.id);
+                            insert into dist_entry_dist_status (dist_entry_status_id, dist_status_id)
+                            values (entry_id, comb_status.id);
+                        end loop;
+                end loop;
+        end loop;
+    return (select count(*) from dist_entry);
+end;
+$$ LANGUAGE plpgsql;
+
+select make_entries();
+drop function make_entries();
+drop table temp_comb_status_order;
+
+update dist_entry e set display = (select r.name from dist_region r where r.id = e.region_id) where display ~ '\(native\)';

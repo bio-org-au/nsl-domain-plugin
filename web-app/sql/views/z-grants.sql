@@ -31,6 +31,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON tree TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version_element TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_region TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;

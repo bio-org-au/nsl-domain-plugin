@@ -17,3 +17,4 @@ out/
 .project
 .settings/
 atlassian-ide-plugin.xml
+.slcache
