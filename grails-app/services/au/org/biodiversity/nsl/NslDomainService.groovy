@@ -16,7 +16,6 @@
 package au.org.biodiversity.nsl
 
 import groovy.sql.Sql
-import groovy.text.SimpleTemplateEngine
 import org.codehaus.groovy.grails.plugins.GrailsPlugin
 import org.hibernate.SessionFactory
 
