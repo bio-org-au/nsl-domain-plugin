@@ -56,4 +56,4 @@ ALTER TABLE tree
 -- make sure a set of distributions only contains a region once
 alter table dist_entry add constraint de_unique_region unique (region_id, tree_element_id);
 
-INSERT INTO db_version (id, version) VALUES (1, 32);
+INSERT INTO db_version (id, version) VALUES (1, 33);

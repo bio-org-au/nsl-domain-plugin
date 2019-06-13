@@ -24,7 +24,7 @@ class NslDomainService {
     def grailsApplication
     SessionFactory sessionFactory_nsl
 
-    static final Integer currentVersion = 32
+    static final Integer currentVersion = 33
 
     File getDdlFile() {
         File pluginDir = getPluginDirectory()
