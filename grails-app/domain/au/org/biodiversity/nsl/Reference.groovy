@@ -38,6 +38,7 @@ class Reference {
     String publisher
     String publishedLocation
     String publicationDate
+    Date isoPublicationDate
     String isbn
     String issn
     String bhlUrl
@@ -85,6 +86,8 @@ class Reference {
         uri sqlType: 'text'
         validRecord defaultvalue: "false"
 
+        isoPublicationDate sqlType: 'date'
+
         sourceId index: 'Ref_Source_Index'
         sourceIdString index: 'Ref_Source_String_Index'
         sourceSystem index: 'Ref_Source_Index,Ref_System_Index'
@@ -116,6 +119,7 @@ class Reference {
         publisher nullable: true, maxSize: 1000
         publishedLocation nullable: true, maxSize: 1000
         publicationDate nullable: true, maxSize: 50
+        isoPublicationDate nullable: true
         isbn nullable: true, maxSize: 16
         issn nullable: true, maxSize: 16
         bhlUrl nullable: true, maxSize: 4000
