@@ -11,7 +11,6 @@ begin
     if match then
         return true;
     end if;
---     return false;
     perform isoString::TIMESTAMP;
     return true;
 exception when others then
