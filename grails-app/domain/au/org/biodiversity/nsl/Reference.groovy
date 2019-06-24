@@ -24,7 +24,7 @@ class Reference {
     String title
     String displayTitle
     String abbrevTitle
-    Integer year
+    Integer year               //a number representing a date year.
     String volume
     String edition
     String pages
@@ -37,8 +37,8 @@ class Reference {
     Boolean published
     String publisher
     String publishedLocation
-    String publicationDate
-    Date isoPublicationDate
+    String publicationDate     //verbatim date of publication
+    String isoPublicationDate  //another f*cking string as a date.
     String isbn
     String issn
     String bhlUrl
@@ -86,8 +86,6 @@ class Reference {
         uri sqlType: 'text'
         validRecord defaultvalue: "false"
 
-        isoPublicationDate sqlType: 'date'
-
         sourceId index: 'Ref_Source_Index'
         sourceIdString index: 'Ref_Source_String_Index'
         sourceSystem index: 'Ref_Source_Index,Ref_System_Index'
@@ -119,7 +117,7 @@ class Reference {
         publisher nullable: true, maxSize: 1000
         publishedLocation nullable: true, maxSize: 1000
         publicationDate nullable: true, maxSize: 50
-        isoPublicationDate nullable: true
+        isoPublicationDate nullable: true, maxSize: 10
         isbn nullable: true, maxSize: 16
         issn nullable: true, maxSize: 16
         bhlUrl nullable: true, maxSize: 4000

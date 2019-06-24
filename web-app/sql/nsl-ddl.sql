@@ -715,7 +715,7 @@
         duplicate_of_id int8,
         edition varchar(100),
         isbn varchar(16),
-        iso_publication_date date,
+        iso_publication_date varchar(10),
         issn varchar(16),
         language_id int8 not null,
         namespace_id int8 not null,
@@ -2843,6 +2843,22 @@ from (SELECT case
      ) entries
 $$;
 
+drop function if exists is_iso8601(varchar);
+create or replace function is_iso8601(isoString varchar) returns boolean as $$
+DECLARE match boolean;
+begin
+    match := isoString ~ '^[1,2][0-9]{3}$' or
+             isoString ~ '^[1,2][0-9]{3}-(01|02|03|04|05|06|07|08|09|10|11|12)$';
+    if match then
+        return true;
+    end if;
+--     return false;
+    perform isoString::TIMESTAMP;
+    return true;
+exception when others then
+    return false;
+end;
+$$ language plpgsql;
 -- other-setup.sql
 --other setup
 ALTER TABLE instance
@@ -2904,6 +2920,7 @@ alter table dist_entry add constraint de_unique_region unique (region_id, tree_e
 
 INSERT INTO db_version (id, version) VALUES (1, 33);
 
+alter table reference add constraint check_iso_date check(is_iso8601(iso_publication_date));
 -- populate-lookup-tables.sql
 -- Populate lookup tables (currently botanical)
 --namespace
