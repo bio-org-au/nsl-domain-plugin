@@ -132,7 +132,7 @@ class Reference {
     }
 
     String getIsoYear() {
-        isoPublicationDate?.substring(1,4)
+        isoPublicationDate?.substring(0,4)
     }
 
     @Override
