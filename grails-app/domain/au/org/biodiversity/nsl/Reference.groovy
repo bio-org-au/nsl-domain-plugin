@@ -131,6 +131,10 @@ class Reference {
         sourceId nullable: true
     }
 
+    String getIsoYear() {
+        isoPublicationDate?.substring(1,4)
+    }
+
     @Override
     String toString() {
         List<String> bits = ["Reference $id: ($refType.name);"]
