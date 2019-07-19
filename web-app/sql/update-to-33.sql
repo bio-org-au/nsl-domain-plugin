@@ -20,6 +20,8 @@ $$ language plpgsql;
 
 alter table reference add constraint check_iso_date check(is_iso8601(iso_publication_date));
 
+update reference set iso_publication_date = year::text where year is not null;
+
 -- version
 UPDATE db_version
 SET version = 33
