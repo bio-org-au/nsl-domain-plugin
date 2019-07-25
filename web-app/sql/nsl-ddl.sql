@@ -66,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -177,10 +177,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -465,8 +465,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -715,6 +715,7 @@
         duplicate_of_id int8,
         edition varchar(100),
         isbn varchar(16),
+        iso_publication_date varchar(10),
         issn varchar(16),
         language_id int8 not null,
         namespace_id int8 not null,
@@ -832,8 +833,8 @@
     );
 
     create table tree_element_distribution_entries (
-        dist_entry_id int8 not null,
         tree_element_id int8 not null,
+        dist_entry_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1165,14 +1166,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1350,14 +1351,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
-        foreign key (tree_element_id) 
-        references tree_element;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_h7k45ugqa75w0860tysr4fgrt 
         foreign key (dist_entry_id) 
         references dist_entry;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
+        foreign key (tree_element_id) 
+        references tree_element;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -2842,6 +2843,22 @@ from (SELECT case
      ) entries
 $$;
 
+drop function if exists is_iso8601(varchar);
+create or replace function is_iso8601(isoString varchar) returns boolean as $$
+DECLARE match boolean;
+begin
+    match := isoString ~ '^[1,2][0-9]{3}$' or
+             isoString ~ '^[1,2][0-9]{3}-(01|02|03|04|05|06|07|08|09|10|11|12)$';
+    if match then
+        return true;
+    end if;
+--     return false;
+    perform isoString::TIMESTAMP;
+    return true;
+exception when others then
+    return false;
+end;
+$$ language plpgsql;
 -- other-setup.sql
 --other setup
 ALTER TABLE instance
@@ -2901,8 +2918,9 @@ ALTER TABLE tree
 -- make sure a set of distributions only contains a region once
 alter table dist_entry add constraint de_unique_region unique (region_id, tree_element_id);
 
-INSERT INTO db_version (id, version) VALUES (1, 32);
+INSERT INTO db_version (id, version) VALUES (1, 33);
 
+alter table reference add constraint check_iso_date check(is_iso8601(iso_publication_date));
 -- populate-lookup-tables.sql
 -- Populate lookup tables (currently botanical)
 --namespace
