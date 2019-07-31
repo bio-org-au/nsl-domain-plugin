@@ -66,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -115,6 +115,12 @@
 
     alter table if exists name_rank 
         drop constraint if exists FK_r67um91pujyfrx7h1cifs3cmb;
+
+    alter table if exists name_resource 
+        drop constraint if exists FK_r3fxh26pbju4ibi35sxxr5oyy;
+
+    alter table if exists name_resource 
+        drop constraint if exists FK_kfyo6ydiecu1xsm2i5s1htsno;
 
     alter table if exists name_status 
         drop constraint if exists FK_swotu3c2gy1hp8f6ekvuo7s26;
@@ -240,6 +246,8 @@
     drop table if exists name_group cascade;
 
     drop table if exists name_rank cascade;
+
+    drop table if exists name_resource cascade;
 
     drop table if exists name_status cascade;
 
@@ -465,8 +473,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -609,6 +617,11 @@
         use_verbatim_rank boolean default false not null,
         visible_in_name boolean default true not null,
         primary key (id)
+    );
+
+    create table name_resource (
+        name_resources_id int8,
+        resource_id int8
     );
 
     create table name_status (
@@ -1166,14 +1179,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1249,6 +1262,16 @@
         add constraint FK_r67um91pujyfrx7h1cifs3cmb 
         foreign key (parent_rank_id) 
         references name_rank;
+
+    alter table if exists name_resource 
+        add constraint FK_r3fxh26pbju4ibi35sxxr5oyy 
+        foreign key (resource_id) 
+        references resource;
+
+    alter table if exists name_resource 
+        add constraint FK_kfyo6ydiecu1xsm2i5s1htsno 
+        foreign key (name_resources_id) 
+        references name;
 
     alter table if exists name_status 
         add constraint FK_swotu3c2gy1hp8f6ekvuo7s26 
@@ -4025,27 +4048,21 @@ EXECUTE PROCEDURE instance_notification();
 GRANT SELECT, INSERT, UPDATE, DELETE ON id_mapper TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON author TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON delayed_jobs TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON external_ref TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON help_topic TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON instance TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON instance_type TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON instance_note TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON instance_note_key TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON language TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON locale TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_category TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_group TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_part TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_rank TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_status TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_type TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON namespace TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON nomenclatural_event_type TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ref_author_role TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ref_type TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON reference TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_query TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON notification TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_tag TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_tag_name TO web;
@@ -4060,6 +4077,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resource TO webapni;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;
@@ -4073,27 +4091,21 @@ GRANT SELECT ON name_detail_commons_vw TO web;
 GRANT SELECT ON id_mapper TO read_only;
 GRANT SELECT ON author TO read_only;
 GRANT SELECT ON delayed_jobs TO read_only;
-GRANT SELECT ON external_ref TO read_only;
-GRANT SELECT ON help_topic TO read_only;
 GRANT SELECT ON instance TO read_only;
 GRANT SELECT ON instance_type TO read_only;
 GRANT SELECT ON instance_note TO read_only;
 GRANT SELECT ON instance_note_key TO read_only;
 GRANT SELECT ON language TO read_only;
-GRANT SELECT ON locale TO read_only;
 GRANT SELECT ON name TO read_only;
 GRANT SELECT ON name_category TO read_only;
 GRANT SELECT ON name_group TO read_only;
-GRANT SELECT ON name_part TO read_only;
 GRANT SELECT ON name_rank TO read_only;
 GRANT SELECT ON name_status TO read_only;
 GRANT SELECT ON name_type TO read_only;
 GRANT SELECT ON namespace TO read_only;
-GRANT SELECT ON nomenclatural_event_type TO read_only;
 GRANT SELECT ON ref_author_role TO read_only;
 GRANT SELECT ON ref_type TO read_only;
 GRANT SELECT ON reference TO read_only;
-GRANT SELECT ON user_query TO read_only;
 GRANT SELECT ON notification TO read_only;
 GRANT SELECT ON name_tag TO read_only;
 GRANT SELECT ON name_tag_name TO read_only;
@@ -4103,6 +4115,8 @@ GRANT SELECT ON tree TO read_only;
 GRANT SELECT ON tree_version TO read_only;
 GRANT SELECT ON tree_version_element TO read_only;
 GRANT SELECT ON tree_element TO read_only;
+GRANT SELECT ON tree_element_distribution_entries TO read_only;
+GRANT SELECT ON name_resource TO read_only;
 
 GRANT SELECT ON instance_resource_vw TO read_only;
 GRANT SELECT ON name_detail_synonyms_vw TO read_only;
