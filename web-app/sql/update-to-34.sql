@@ -1,26 +1,27 @@
-alter table if exists name_resource
-    drop constraint if exists FK_r3fxh26pbju4ibi35sxxr5oyy;
+alter table if exists name_resources
+    drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
 
-alter table if exists name_resource
-    drop constraint if exists FK_kfyo6ydiecu1xsm2i5s1htsno;
+alter table if exists name_resources
+    drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
 
 drop table if exists name_resource cascade;
 
-create table name_resource
+create table name_resources
 (
-    name_resources_id int8,
-    resource_id       int8
+    resource_id int8 not null,
+    name_id     int8 not null,
+    primary key (name_id, resource_id)
 );
 
-alter table if exists name_resource
-    add constraint FK_r3fxh26pbju4ibi35sxxr5oyy
+alter table if exists name_resources
+    add constraint FK_nhx4nd4uceqs7n5abwfeqfun5
+        foreign key (name_id)
+            references name;
+
+alter table if exists name_resources
+    add constraint FK_goyj9wmbb1y4a6y4q5ww3nhby
         foreign key (resource_id)
             references resource;
-
-alter table if exists name_resource
-    add constraint FK_kfyo6ydiecu1xsm2i5s1htsno
-        foreign key (name_resources_id)
-            references name;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON name_resource TO webapni;
 GRANT SELECT ON name_resource TO read_only;
