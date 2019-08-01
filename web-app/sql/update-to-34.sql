@@ -4,7 +4,7 @@ alter table if exists name_resources
 alter table if exists name_resources
     drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
 
-drop table if exists name_resource cascade;
+drop table if exists name_resources cascade;
 
 create table name_resources
 (
@@ -23,8 +23,8 @@ alter table if exists name_resources
         foreign key (resource_id)
             references resource;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_resource TO webapni;
-GRANT SELECT ON name_resource TO read_only;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO webapni;
+GRANT SELECT ON name_resources TO read_only;
 
 -- version
 UPDATE db_version
