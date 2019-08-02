@@ -23,7 +23,7 @@ alter table if exists name_resources
         foreign key (resource_id)
             references resource;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO ${webUserName};
 GRANT SELECT ON name_resources TO read_only;
 
 -- version

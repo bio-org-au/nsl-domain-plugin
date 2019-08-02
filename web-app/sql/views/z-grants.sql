@@ -31,7 +31,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_resource TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO webapni;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;
@@ -70,7 +70,7 @@ GRANT SELECT ON tree_version TO read_only;
 GRANT SELECT ON tree_version_element TO read_only;
 GRANT SELECT ON tree_element TO read_only;
 GRANT SELECT ON tree_element_distribution_entries TO read_only;
-GRANT SELECT ON name_resource TO read_only;
+GRANT SELECT ON name_resources TO read_only;
 
 GRANT SELECT ON instance_resource_vw TO read_only;
 GRANT SELECT ON name_detail_synonyms_vw TO read_only;

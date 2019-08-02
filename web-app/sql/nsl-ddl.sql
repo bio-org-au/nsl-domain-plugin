@@ -66,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -117,10 +117,10 @@
         drop constraint if exists FK_r67um91pujyfrx7h1cifs3cmb;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
+        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
+        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
 
     alter table if exists name_status 
         drop constraint if exists FK_swotu3c2gy1hp8f6ekvuo7s26;
@@ -473,8 +473,8 @@
     );
 
     create table instance_resources (
-        resource_id int8 not null,
         instance_id int8 not null,
+        resource_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -620,8 +620,8 @@
     );
 
     create table name_resources (
-        resource_id int8 not null,
         name_id int8 not null,
+        resource_id int8 not null,
         primary key (name_id, resource_id)
     );
 
@@ -1180,14 +1180,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
-        foreign key (instance_id) 
-        references instance;
-
-    alter table if exists instance_resources 
         add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists instance_resources 
+        add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
+        foreign key (instance_id) 
+        references instance;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1265,14 +1265,14 @@
         references name_rank;
 
     alter table if exists name_resources 
-        add constraint FK_nhx4nd4uceqs7n5abwfeqfun5 
-        foreign key (name_id) 
-        references name;
-
-    alter table if exists name_resources 
         add constraint FK_goyj9wmbb1y4a6y4q5ww3nhby 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists name_resources 
+        add constraint FK_nhx4nd4uceqs7n5abwfeqfun5 
+        foreign key (name_id) 
+        references name;
 
     alter table if exists name_status 
         add constraint FK_swotu3c2gy1hp8f6ekvuo7s26 
@@ -4078,7 +4078,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_resource TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO webapni;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;
@@ -4117,7 +4117,7 @@ GRANT SELECT ON tree_version TO read_only;
 GRANT SELECT ON tree_version_element TO read_only;
 GRANT SELECT ON tree_element TO read_only;
 GRANT SELECT ON tree_element_distribution_entries TO read_only;
-GRANT SELECT ON name_resource TO read_only;
+GRANT SELECT ON name_resources TO read_only;
 
 GRANT SELECT ON instance_resource_vw TO read_only;
 GRANT SELECT ON name_detail_synonyms_vw TO read_only;
