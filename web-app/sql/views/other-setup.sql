@@ -56,6 +56,7 @@ ALTER TABLE tree
 -- make sure a set of distributions only contains a region once
 alter table dist_entry add constraint de_unique_region unique (region_id, tree_element_id);
 
-INSERT INTO db_version (id, version) VALUES (1, 33);
-
+-- make sure iso_publication_date is a date
 alter table reference add constraint check_iso_date check(is_iso8601(iso_publication_date));
+
+INSERT INTO db_version (id, version) VALUES (1, 34);
