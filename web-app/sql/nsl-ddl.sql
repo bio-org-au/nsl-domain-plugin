@@ -66,10 +66,10 @@
         drop constraint if exists FK_f6s94njexmutjxjv8t5dy1ugt;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
+        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
 
     alter table if exists instance_resources 
-        drop constraint if exists FK_49ic33s4xgbdoa4p5j107rtpf;
+        drop constraint if exists FK_8mal9hru5u3ypaosfoju8ulpd;
 
     alter table if exists name 
         drop constraint if exists FK_airfjupm6ohehj1lj82yqkwdx;
@@ -117,10 +117,10 @@
         drop constraint if exists FK_r67um91pujyfrx7h1cifs3cmb;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
+        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
+        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
 
     alter table if exists name_status 
         drop constraint if exists FK_swotu3c2gy1hp8f6ekvuo7s26;
@@ -183,10 +183,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -473,8 +473,8 @@
     );
 
     create table instance_resources (
-        instance_id int8 not null,
         resource_id int8 not null,
+        instance_id int8 not null,
         primary key (instance_id, resource_id)
     );
 
@@ -620,8 +620,8 @@
     );
 
     create table name_resources (
-        name_id int8 not null,
         resource_id int8 not null,
+        name_id int8 not null,
         primary key (name_id, resource_id)
     );
 
@@ -847,8 +847,8 @@
     );
 
     create table tree_element_distribution_entries (
-        dist_entry_id int8 not null,
         tree_element_id int8 not null,
+        dist_entry_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1180,14 +1180,14 @@
         references namespace;
 
     alter table if exists instance_resources 
-        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists instance_resources 
         add constraint FK_49ic33s4xgbdoa4p5j107rtpf 
         foreign key (instance_id) 
         references instance;
+
+    alter table if exists instance_resources 
+        add constraint FK_8mal9hru5u3ypaosfoju8ulpd 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name 
         add constraint FK_airfjupm6ohehj1lj82yqkwdx 
@@ -1265,14 +1265,14 @@
         references name_rank;
 
     alter table if exists name_resources 
-        add constraint FK_goyj9wmbb1y4a6y4q5ww3nhby 
-        foreign key (resource_id) 
-        references resource;
-
-    alter table if exists name_resources 
         add constraint FK_nhx4nd4uceqs7n5abwfeqfun5 
         foreign key (name_id) 
         references name;
+
+    alter table if exists name_resources 
+        add constraint FK_goyj9wmbb1y4a6y4q5ww3nhby 
+        foreign key (resource_id) 
+        references resource;
 
     alter table if exists name_status 
         add constraint FK_swotu3c2gy1hp8f6ekvuo7s26 
@@ -1375,14 +1375,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
-        foreign key (tree_element_id) 
-        references tree_element;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_h7k45ugqa75w0860tysr4fgrt 
         foreign key (dist_entry_id) 
         references dist_entry;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
+        foreign key (tree_element_id) 
+        references tree_element;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -1674,34 +1674,34 @@ DROP MATERIALIZED VIEW IF EXISTS name_view;
 -- --- name-view uses these functions
 DROP FUNCTION IF EXISTS find_rank(BIGINT, INT);
 CREATE FUNCTION find_rank(name_id BIGINT, rank_sort_order INT)
-  RETURNS TABLE
-          (
-            name_element TEXT,
-            rank         TEXT,
-            sort_order   INT
-          )
-  LANGUAGE SQL
+    RETURNS TABLE
+            (
+                name_element TEXT,
+                rank         TEXT,
+                sort_order   INT
+            )
+    LANGUAGE SQL
 AS
 $$
 WITH RECURSIVE walk (parent_id, name_element, rank, sort_order) AS (
-  SELECT parent_id,
-         n.name_element,
-         r.name,
-         r.sort_order
-  FROM name n
-         JOIN name_rank r ON n.name_rank_id = r.id
-  WHERE n.id = name_id
-    AND r.sort_order >= rank_sort_order
-  UNION ALL
-  SELECT n.parent_id,
-         n.name_element,
-         r.name,
-         r.sort_order
-  FROM walk w,
-       name n
-         JOIN name_rank r ON n.name_rank_id = r.id
-  WHERE n.id = w.parent_id
-    AND r.sort_order >= rank_sort_order
+    SELECT parent_id,
+           n.name_element,
+           r.name,
+           r.sort_order
+    FROM name n
+             JOIN name_rank r ON n.name_rank_id = r.id
+    WHERE n.id = name_id
+      AND r.sort_order >= rank_sort_order
+    UNION ALL
+    SELECT n.parent_id,
+           n.name_element,
+           r.name,
+           r.sort_order
+    FROM walk w,
+         name n
+             JOIN name_rank r ON n.name_rank_id = r.id
+    WHERE n.id = w.parent_id
+      AND r.sort_order >= rank_sort_order
 )
 SELECT w.name_element,
        w.rank,
@@ -1713,8 +1713,8 @@ $$;
 
 drop function if exists inc_status(nameId bigint);
 CREATE function inc_status(nameId bigint)
-  returns text
-  language sql
+    returns text
+    language sql
 as
 $$
 select 'included' :: text
@@ -1725,151 +1725,139 @@ $$;
 
 drop function if exists excluded_status(nameId bigint);
 CREATE function excluded_status(nameId bigint)
-  returns text
-  language sql
+    returns text
+    language sql
 as
 $$
 select case when te.excluded = true then 'excluded' else 'accepted' end
 from tree_element te
-       JOIN tree_version_element tve ON te.id = tve.tree_element_id
-       JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
+         JOIN tree_version_element tve ON te.id = tve.tree_element_id
+         JOIN tree ON tve.tree_version_id = tree.current_tree_version_id AND tree.accepted_tree = TRUE
 where te.name_id = nameId
 $$;
 
 drop function if exists accepted_status(nameId BIGINT);
 CREATE FUNCTION accepted_status(nameId BIGINT)
-  RETURNS TEXT
-  LANGUAGE SQL
+    RETURNS TEXT
+    LANGUAGE SQL
 AS
 $$
 select coalesce(excluded_status(nameId), inc_status(nameId), 'unplaced');
 $$;
 
-CREATE MATERIALIZED VIEW name_view AS
-SELECT n.full_name                                           AS "scientificName",
-       n.full_name_html                                      AS "scientificNameHTML",
-       n.simple_name                                         AS "canonicalName",
-       n.simple_name_html                                    AS "canonicalNameHTML",
-       n.name_element                                        AS "nameElement",
-       mapper_host.value || n.uri                            AS "scientificNameID",
-
-       nt.name                                               AS "nameType",
-       accepted_status(n.id)                                AS "taxonomicStatus",
-
+create materialized view name_view as
+SELECT n.full_name                                                           AS "scientificName",
+       n.full_name_html                                                      AS "scientificNameHTML",
+       n.simple_name                                                         AS "canonicalName",
+       n.simple_name_html                                                    AS "canonicalNameHTML",
+       n.name_element                                                        AS "nameElement",
+       ((mapper_host.value)::text || n.uri)                                  AS "scientificNameID",
+       nt.name                                                               AS "nameType",
+       (SELECT COALESCE((SELECT CASE
+                                    WHEN (te.excluded = true) THEN 'excluded'::text
+                                    ELSE 'accepted'::text
+                                    END AS "case"
+                         FROM ((tree_element te
+                             JOIN tree_version_element tve ON ((te.id = tve.tree_element_id)))
+                                  JOIN tree ON (((tve.tree_version_id = tree.current_tree_version_id) AND
+                                                 (tree.accepted_tree = true))))
+                         WHERE (te.name_id = n.id)), (SELECT 'included'::text AS text
+                                                      WHERE (EXISTS(SELECT 1
+                                                                    FROM tree_element te2
+                                                                    WHERE (te2.synonyms @>
+                                                                           ((SELECT (('{"list":[{"name_id":'::text || n.id) || ', "mis":false}]}'::text)))::jsonb)))),
+                        'unplaced'::text) AS "coalesce")                     AS "taxonomicStatus",
        CASE
-         WHEN ns.name NOT IN ('legitimate', '[default]')
-           THEN ns.name
-         ELSE NULL END                                       AS "nomenclaturalStatus",
-
+           WHEN ((ns.name)::text <> ALL
+                 (ARRAY [('legitimate'::character varying)::text, ('[default]'::character varying)::text])) THEN ns.name
+           ELSE NULL::character varying
+           END                                                               AS "nomenclaturalStatus",
        CASE
-         WHEN nt.autonym
-           THEN NULL
-         ELSE
-           regexp_replace(substring(n.full_name_html FROM '<authors>(.*)</authors>'), '<[^>]*>', '', 'g')
-         END                                                 AS "scientificNameAuthorship",
-
+           WHEN nt.autonym THEN NULL::text
+           ELSE regexp_replace("substring"((n.full_name_html)::text, '<authors>(.*)</authors>'::text), '<[^>]*>'::text,
+                               ''::text, 'g'::text)
+           END                                                               AS "scientificNameAuthorship",
        CASE
-         WHEN nt.cultivar = TRUE
-           THEN n.name_element
-         ELSE NULL END                                       AS "cultivarEpithet",
-
-       nt.autonym                                            AS "autonym",
-       nt.hybrid                                             AS "hybrid",
-       nt.cultivar                                           AS "cultivar",
-       nt.formula                                            AS "formula",
-       nt.scientific                                         AS "scientific",
-       ns.nom_inval                                          AS "nomInval",
-       ns.nom_illeg                                          AS "nomIlleg",
-       coalesce(primary_ref.citation,
-                (SELECT r.citation
-                 FROM instance s
-                        JOIN instance_type it ON s.instance_type_id = it.id AND it.secondary_instance
-                        JOIN reference r ON s.reference_id = r.id
-                 ORDER BY r.year ASC
-                 LIMIT 1
-                ))                                           AS "namePublishedIn",
-       coalesce(primary_ref.year,
-                (SELECT r.year
-                 FROM instance s
-                        JOIN instance_type it ON s.instance_type_id = it.id AND it.secondary_instance
-                        JOIN reference r ON s.reference_id = r.id
-                 ORDER BY r.year ASC
-                 LIMIT 1
-                ))                                           AS "namePublishedInYear",
-       primary_it.name                                       AS "nameInstanceType",
-       basionym.full_name                                    AS "originalNameUsage",
+           WHEN (nt.cultivar = true) THEN n.name_element
+           ELSE NULL::character varying
+           END                                                               AS "cultivarEpithet",
+       nt.autonym,
+       nt.hybrid,
+       nt.cultivar,
+       nt.formula,
+       nt.scientific,
+       ns.nom_inval                                                          AS "nomInval",
+       ns.nom_illeg                                                          AS "nomIlleg",
+       COALESCE(primary_ref.citation, 'unknown')                             AS "namePublishedIn",
+       COALESCE(primary_ref.year, 0)                                         AS "namePublishedInYear",
+       primary_it.name                                                       AS "nameInstanceType",
+       basionym.full_name                                                    AS "originalNameUsage",
        CASE
-         WHEN basionym_inst.id IS NOT NULL
-           THEN mapper_host.value || (select uri from instance where id = basionym_inst.cites_id) :: TEXT
-         ELSE
-           CASE
-             WHEN primary_inst.id IS NOT NULL
-               THEN mapper_host.value || primary_inst.uri :: TEXT
-             ELSE NULL END
-         END                                                 AS "originalNameUsageID",
-
+           WHEN (basionym_inst.id IS NOT NULL) THEN ((mapper_host.value)::text || (SELECT instance.uri
+                                                                                   FROM instance
+                                                                                   WHERE (instance.id = basionym_inst.cites_id)))
+           ELSE
+               CASE
+                   WHEN (primary_inst.id IS NOT NULL) THEN ((mapper_host.value)::text || primary_inst.uri)
+                   ELSE NULL::text
+                   END
+           END                                                               AS "originalNameUsageID",
        CASE
-         WHEN nt.autonym = TRUE
-           THEN parent_name.full_name
-         ELSE
-           (SELECT string_agg(regexp_replace(VALUE, E'[\n\r\u2028]+', ' ', 'g'), ' ')
-            FROM instance_note note
-                   JOIN instance_note_key key1
-                        ON key1.id = note.instance_note_key_id
-                          AND key1.name = 'Type'
-            WHERE note.instance_id = coalesce(basionym_inst.cites_id, primary_inst.id))
-         END                                                 AS "typeCitation",
+           WHEN (nt.autonym = true) THEN (parent_name.full_name)::text
+           ELSE (SELECT string_agg(regexp_replace((note.value)::text, '[
 
-       (SELECT name_element FROM find_rank(n.id, 10))        AS "kingdom",
-       family_name.name_element                              AS "family",
-       (SELECT name_element FROM find_rank(n.id, 120))       AS "genericName",
-       (SELECT name_element FROM find_rank(n.id, 190))       AS "specificEpithet",
-       (SELECT name_element FROM find_rank(n.id, 191))       AS "infraspecificEpithet",
-
-       rank.name                                             AS "taxonRank",
-       rank.sort_order                                       AS "taxonRankSortOrder",
-       rank.abbrev                                           AS "taxonRankAbbreviation",
-
-       first_hybrid_parent.full_name                         AS "firstHybridParentName",
-       mapper_host.value || first_hybrid_parent.uri          AS "firstHybridParentNameID",
-       second_hybrid_parent.full_name                        AS "secondHybridParentName",
-       mapper_host.value || second_hybrid_parent.uri         AS "secondHybridParentNameID",
-
-       n.created_at                                          AS "created",
-       n.updated_at                                          AS "modified",
-       -- boiler plate
-       (select coalesce((SELECT value FROM shard_config WHERE name = 'nomenclatural code'),
-                        'ICN')) :: TEXT                      AS "nomenclaturalCode",
-       dataset.value                                         AS "datasetName",
-       'http://creativecommons.org/licenses/by/3.0/' :: TEXT AS "license",
-       mapper_host.value || n.uri                            AS "ccAttributionIRI"
-
-FROM name n
-       JOIN name_type nt ON n.name_type_id = nt.id
-       JOIN name_status ns ON n.name_status_id = ns.id
-       JOIN name_rank rank ON n.name_rank_id = rank.id
-
-       LEFT OUTER JOIN name parent_name ON n.parent_id = parent_name.id
-       LEFT OUTER JOIN name family_name ON n.family_id = family_name.id
-
-       LEFT OUTER JOIN NAME first_hybrid_parent ON n.parent_id = first_hybrid_parent.id AND nt.hybrid
-       LEFT OUTER JOIN NAME second_hybrid_parent ON n.second_parent_id = second_hybrid_parent.id AND nt.hybrid
-
-       LEFT OUTER JOIN INSTANCE primary_inst
-       JOIN instance_type primary_it
-            ON primary_it.id = primary_inst.instance_type_id AND primary_it.primary_instance = TRUE
-       JOIN REFERENCE primary_ref ON primary_inst.reference_id = primary_ref.id
-            ON primary_inst.name_id = n.id
-
-       LEFT OUTER JOIN INSTANCE basionym_inst
-       JOIN instance_type bit ON bit.id = basionym_inst.instance_type_id AND bit.name = 'basionym'
-       JOIN NAME basionym ON basionym.id = basionym_inst.name_id
-            ON basionym_inst.cited_by_id = primary_inst.id
-       LEFT OUTER JOIN shard_config mapper_host on mapper_host.name = 'mapper host'
-       LEFT OUTER JOIN shard_config dataset on dataset.name = 'name label'
-WHERE exists(SELECT 1
-             FROM instance
-             WHERE name_id = n.id)
+ ]+'::text, ' '::text, 'g'::text), ' '::text) AS string_agg
+                 FROM (instance_note note
+                          JOIN instance_note_key key1
+                               ON (((key1.id = note.instance_note_key_id) AND ((key1.name)::text = 'Type'::text))))
+                 WHERE (note.instance_id = COALESCE(basionym_inst.cites_id, primary_inst.id)))
+           END                                                               AS "typeCitation",
+       (SELECT find_rank.name_element
+        FROM find_rank(n.id, 10) find_rank(name_element, rank, sort_order))  AS kingdom,
+       family_name.name_element                                              AS family,
+       (SELECT find_rank.name_element
+        FROM find_rank(n.id, 120) find_rank(name_element, rank, sort_order)) AS "genericName",
+       (SELECT find_rank.name_element
+        FROM find_rank(n.id, 190) find_rank(name_element, rank, sort_order)) AS "specificEpithet",
+       (SELECT find_rank.name_element
+        FROM find_rank(n.id, 191) find_rank(name_element, rank, sort_order)) AS "infraspecificEpithet",
+       rank.name                                                             AS "taxonRank",
+       rank.sort_order                                                       AS "taxonRankSortOrder",
+       rank.abbrev                                                           AS "taxonRankAbbreviation",
+       first_hybrid_parent.full_name                                         AS "firstHybridParentName",
+       ((mapper_host.value)::text || first_hybrid_parent.uri)                AS "firstHybridParentNameID",
+       second_hybrid_parent.full_name                                        AS "secondHybridParentName",
+       ((mapper_host.value)::text || second_hybrid_parent.uri)               AS "secondHybridParentNameID",
+       n.created_at                                                          AS created,
+       n.updated_at                                                          AS modified,
+       ((SELECT COALESCE((SELECT shard_config.value
+                          FROM shard_config
+                          WHERE ((shard_config.name)::text = 'nomenclatural code'::text)),
+                         'ICN'::character varying) AS "coalesce"))::text     AS "nomenclaturalCode",
+       dataset.value                                                         AS "datasetName",
+       'http://creativecommons.org/licenses/by/3.0/'::text                   AS license,
+       ((mapper_host.value)::text || n.uri)                                  AS "ccAttributionIRI"
+FROM (((((((((((name n
+    JOIN name_type nt ON ((n.name_type_id = nt.id)))
+    JOIN name_status ns ON ((n.name_status_id = ns.id)))
+    JOIN name_rank rank ON ((n.name_rank_id = rank.id)))
+    LEFT JOIN name parent_name ON ((n.parent_id = parent_name.id)))
+    LEFT JOIN name family_name ON ((n.family_id = family_name.id)))
+    LEFT JOIN name first_hybrid_parent ON (((n.parent_id = first_hybrid_parent.id) AND nt.hybrid)))
+    LEFT JOIN name second_hybrid_parent ON (((n.second_parent_id = second_hybrid_parent.id) AND nt.hybrid)))
+    LEFT JOIN ((instance primary_inst
+        JOIN instance_type primary_it ON (((primary_it.id = primary_inst.instance_type_id) AND
+                                           (primary_it.primary_instance = true))))
+        JOIN reference primary_ref ON ((primary_inst.reference_id = primary_ref.id))) ON ((primary_inst.name_id = n.id)))
+    LEFT JOIN ((instance basionym_inst
+        JOIN instance_type "bit" ON ((("bit".id = basionym_inst.instance_type_id) AND
+                                      (("bit".name)::text = 'basionym'::text))))
+        JOIN name basionym ON ((basionym.id = basionym_inst.name_id))) ON ((basionym_inst.cited_by_id = primary_inst.id)))
+    LEFT JOIN shard_config mapper_host ON (((mapper_host.name)::text = 'mapper host'::text)))
+         LEFT JOIN shard_config dataset ON (((dataset.name)::text = 'name label'::text)))
+WHERE (EXISTS(SELECT 1
+              FROM instance
+              WHERE (instance.name_id = n.id)))
 ORDER BY n.sort_name;
 -- export-taxon-view.sql
 DROP MATERIALIZED VIEW IF EXISTS taxon_view;
@@ -1922,7 +1910,7 @@ $$;
 CREATE MATERIALIZED VIEW taxon_view AS
 
     -- synonyms bit
-    (SELECT (syn ->> 'host') || (syn ->> 'concept_link')                                                      AS "taxonID",
+    (SELECT (syn ->> 'host') || (syn ->> 'instance_link')                                                   AS "taxonID",
             acc_nt.name                                                                                     AS "nameType",
             tree.host_name || tve.element_link                                                              AS "acceptedNameUsageID",
             acc_name.full_name                                                                              AS "acceptedNameUsage",
@@ -2149,17 +2137,50 @@ select coalesce(
           limit 1), nameid);
 $$;
 
+drop function if exists ref_parent_date(bigint);
+create function ref_parent_date(ref_id BIGINT)
+    returns text
+    language sql
+as
+$$
+select case
+           when rt.use_parent_details = true
+               then coalesce(r.iso_publication_date, pr.iso_publication_date)
+           else r.iso_publication_date
+           end
+from reference r
+         join ref_type rt on r.ref_type_id = rt.id
+         left outer join reference pr on r.parent_id = pr.id
+where r.id = ref_id;
+$$;
+
+-- ref.year from iso publication date
+drop function if exists ref_year(text);
+create function ref_year(iso_publication_date text)
+    returns integer
+    language sql
+as
+$$
+select cast(substring(iso_publication_date from 1 for 4) AS integer)
+$$;
+
 -- Find earliest local instance for a name.
 drop function if exists first_ref(bigint);
 create function first_ref(nameid bigint)
-  returns table(group_id bigint, group_name text, group_year integer)
-language sql
-as $$
-select n.id group_id, n.sort_name group_name, min(r.year)
+    returns table
+            (
+                group_id           bigint,
+                group_name         text,
+                group_iso_pub_date text
+            )
+    language sql
+as
+$$
+select n.id group_id, n.sort_name group_name, min(r.iso_publication_date)
 from name n
-       join instance i
-       join reference r on i.reference_id = r.id
-         on n.id  = i.name_id
+         join instance i
+         join reference r on i.reference_id = r.id
+              on n.id = i.name_id
 where n.id = nameid
 group by n.id, sort_name
 $$;
@@ -2183,53 +2204,59 @@ select coalesce((select alt_of_inst.name_id
 $$;
 
 -- get the synonyms of a name in flora order for apni
-
 drop function if exists apni_ordered_nom_synonymy(bigint);
 create function apni_ordered_nom_synonymy(instanceid bigint)
-  returns TABLE(instance_id      bigint,
-                instance_uri     text,
-                instance_type    text,
-                instance_type_id bigint,
-                name_id          bigint,
-                name_uri         text,
-                full_name        text,
-                full_name_html   text,
-                name_status      text,
-                citation         text,
-                citation_html    text,
-                year             int,
-                page             text,
-                sort_name        text,
-                misapplied       boolean,
-                ref_id           bigint)
-language sql
-as $$
+    returns TABLE
+            (
+                instance_id          bigint,
+                instance_uri         text,
+                instance_type        text,
+                instance_type_id     bigint,
+                name_id              bigint,
+                name_uri             text,
+                full_name            text,
+                full_name_html       text,
+                name_status          text,
+                citation             text,
+                citation_html        text,
+                year                 int,
+                iso_publication_date text,
+                page                 text,
+                sort_name            text,
+                misapplied           boolean,
+                ref_id               bigint
+            )
+    language sql
+as
+$$
 select i.id,
        i.uri,
-       it.has_label as instance_type,
-       it.id        as instance_type_id,
-       n.id         as name_id,
+       it.has_label                     as instance_type,
+       it.id                            as instance_type_id,
+       n.id                             as name_id,
        n.uri,
        n.full_name,
        n.full_name_html,
-       ns.name      as name_status,
+       ns.name                          as name_status,
        r.citation,
        r.citation_html,
-       r.year,
+       ref_year(iso_date) as year,
+       coalesce(iso_date, '-'),
        cites.page,
        n.sort_name,
        false,
        r.id
 from instance i
-       join instance_type it on i.instance_type_id = it.id and it.nomenclatural
-       join name n on i.name_id = n.id
-       join name_status ns on n.name_status_id = ns.id
-       left outer join instance cites on i.cites_id = cites.id
-       left outer join reference r on cites.reference_id = r.id
+         join instance_type it on i.instance_type_id = it.id and it.nomenclatural
+         join name n on i.name_id = n.id
+         join name_status ns on n.name_status_id = ns.id
+         left outer join instance cites on i.cites_id = cites.id
+         left outer join reference r on cites.reference_id = r.id
+         left outer join ref_parent_date(r.id) iso_date on true
 where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.nomenclatural desc,
-         r.year,
+         iso_date,
          n.sort_name,
          it.pro_parte,
          it.doubtful,
@@ -2239,77 +2266,84 @@ $$;
 
 drop function if exists apni_ordered_other_synonymy(bigint);
 create function apni_ordered_other_synonymy(instanceid bigint)
-  returns TABLE(instance_id      bigint,
-                instance_uri     text,
-                instance_type    text,
-                instance_type_id bigint,
-                name_id          bigint,
-                name_uri         text,
-                full_name        text,
-                full_name_html   text,
-                name_status      text,
-                citation         text,
-                citation_html    text,
-                year             int,
-                page             text,
-                sort_name        text,
-                group_name       text,
-                group_head       boolean,
-                group_year       integer,
-                misapplied       boolean,
-                ref_id           bigint,
-                og_id            bigint,
-                og_head          boolean,
-                og_name text,
-                og_year integer)
-language sql
-as $$
-select i.id                            as instance_id,
-       i.uri                           as instance_uri,
-       it.has_label                    as instance_type,
-       it.id                           as instance_type_id,
-       n.id                            as name_id,
-       n.uri                           as name_uri,
+    returns TABLE
+            (
+                instance_id          bigint,
+                instance_uri         text,
+                instance_type        text,
+                instance_type_id     bigint,
+                name_id              bigint,
+                name_uri             text,
+                full_name            text,
+                full_name_html       text,
+                name_status          text,
+                citation             text,
+                citation_html        text,
+                year                 int,
+                iso_publication_date text,
+                page                 text,
+                sort_name            text,
+                group_name           text,
+                group_head           boolean,
+                group_iso_pub_date   text,
+                misapplied           boolean,
+                ref_id               bigint,
+                og_id                bigint,
+                og_head              boolean,
+                og_name              text,
+                og_year              text
+            )
+    language sql
+as
+$$
+select i.id                                                            as instance_id,
+       i.uri                                                           as instance_uri,
+       it.has_label                                                    as instance_type,
+       it.id                                                           as instance_type_id,
+       n.id                                                            as name_id,
+       n.uri                                                           as name_uri,
        n.full_name,
        n.full_name_html,
-       ns.name                         as name_status,
+       ns.name                                                         as name_status,
        r.citation,
        r.citation_html,
-       r.year,
+       ref_year(iso_date)                                as year,
+       coalesce(iso_date,'-'),
        cites.page,
        n.sort_name,
-       ng.group_name                   as group_name,
-       ng.group_id = n.id              as group_head,
-       coalesce(ng.group_year, r.year) as group_year,
+       ng.group_name                                                   as group_name,
+       ng.group_id = n.id                                              as group_head,
+       coalesce(ng.group_iso_pub_date, r.iso_publication_date) :: text as group_iso_pub_date,
        it.misapplied,
-       r.id                            as ref_id,
-       og_id                           as og_id,
-       og_id = n.id                    as og_head,
-       coalesce(ogn.sort_name, n.sort_name) as og_name,
-       coalesce(ogr.year,r.year)       as og_year
+       r.id                                                            as ref_id,
+       og_id                                                           as og_id,
+       og_id = n.id                                                    as og_head,
+       coalesce(ogn.sort_name, n.sort_name)                            as og_name,
+       coalesce(ogr.iso_publication_date, r.iso_publication_date)      as og_iso_pub_date
 from instance i
-       join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
-       join name n on i.name_id = n.id
-       join name_type nt on n.name_type_id = nt.id
-       join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og_id on true
-       left outer join name ogn on ogn.id = og_id and not og_id = n.id
-       left outer join instance ogi
-       join reference ogr on ogr.id = ogi.reference_id
-         on ogi.name_id = og_id and ogi.id = i.cited_by_id and not og_id = n.id
-       left outer join first_ref(basionym(og_id)) ng on true
-       join name_status ns on n.name_status_id = ns.id
-       left outer join instance cites on i.cites_id = cites.id
-       left outer join reference r on cites.reference_id = r.id
+         join instance_type it on i.instance_type_id = it.id and not it.nomenclatural and it.relationship
+         join name n on i.name_id = n.id
+         join name_type nt on n.name_type_id = nt.id
+         join orth_or_alt_of(case when nt.autonym then n.parent_id else n.id end) og_id on true
+         left outer join name ogn on ogn.id = og_id and not og_id = n.id
+         left outer join instance ogi
+         join reference ogr on ogr.id = ogi.reference_id
+              on ogi.name_id = og_id and ogi.id = i.cited_by_id and not og_id = n.id
+         left outer join first_ref(basionym(og_id)) ng on true
+         join name_status ns on n.name_status_id = ns.id
+         left outer join instance cites on i.cites_id = cites.id
+         left outer join reference r on cites.reference_id = r.id
+         left outer join ref_parent_date(r.id) iso_date on true
 where i.cited_by_id = instanceid
 order by (it.sort_order < 20) desc,
          it.taxonomic desc,
-         group_year,
+         group_iso_pub_date,
          group_name,
          group_head desc,
-         og_year,
+         og_iso_pub_date,
          og_name,
          og_head desc,
-         r.year,
+         iso_date,
          n.sort_name,
          it.pro_parte,
          it.misapplied desc,
@@ -2319,33 +2353,64 @@ order by (it.sort_order < 20) desc,
 $$;
 
 drop function if exists apni_ordered_synonymy(bigint);
-
 create function apni_ordered_synonymy(instanceid bigint)
-  returns TABLE(instance_id      bigint,
-                instance_uri     text,
-                instance_type    text,
-                instance_type_id bigint,
-                name_id          bigint,
-                name_uri         text,
-                full_name        text,
-                full_name_html   text,
-                name_status      text,
-                citation         text,
-                citation_html    text,
-                year             int,
-                page             text,
-                sort_name        text,
-                misapplied       boolean,
-                ref_id           bigint)
-language sql
-as $$
+    returns TABLE
+            (
+                instance_id          bigint,
+                instance_uri         text,
+                instance_type        text,
+                instance_type_id     bigint,
+                name_id              bigint,
+                name_uri             text,
+                full_name            text,
+                full_name_html       text,
+                name_status          text,
+                citation             text,
+                citation_html        text,
+                iso_publication_date text,
+                page                 text,
+                sort_name            text,
+                misapplied           boolean,
+                ref_id               bigint
+            )
+    language sql
+as
+$$
 
-select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
-       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+select instance_id,
+       instance_uri,
+       instance_type,
+       instance_type_id,
+       name_id,
+       name_uri,
+       full_name,
+       full_name_html,
+       name_status,
+       citation,
+       citation_html,
+       iso_publication_date,
+       page,
+       sort_name,
+       misapplied,
+       ref_id
 from apni_ordered_nom_synonymy(instanceid)
 union all
-select instance_id, instance_uri, instance_type, instance_type_id, name_id, name_uri, full_name, full_name_html,
-       name_status, citation, citation_html, year, page, sort_name, misapplied, ref_id
+select instance_id,
+       instance_uri,
+       instance_type,
+       instance_type_id,
+       name_id,
+       name_uri,
+       full_name,
+       full_name_html,
+       name_status,
+       citation,
+       citation_html,
+       iso_publication_date,
+       page,
+       sort_name,
+       misapplied,
+       ref_id
 from apni_ordered_other_synonymy(instanceid)
 $$;
 
@@ -2392,26 +2457,30 @@ from apni_ordered_synonymy(instanceid) syn;
 $$;
 
 -- if this is a relationship instance what are we a synonym of
-
 drop function if exists apni_synonym(bigint);
 create function apni_synonym(instanceid bigint)
-  returns TABLE(instance_id    bigint,
-                instance_uri   text,
-                instance_type  text,
-                instance_type_id bigint,
-                name_id        bigint,
-                name_uri       text,
-                full_name      text,
-                full_name_html text,
-                name_status    text,
-                citation       text,
-                citation_html  text,
-                year           int,
-                page           text,
-                misapplied     boolean,
-                sort_name      text)
-language sql
-as $$
+    returns TABLE
+            (
+                instance_id          bigint,
+                instance_uri         text,
+                instance_type        text,
+                instance_type_id     bigint,
+                name_id              bigint,
+                name_uri             text,
+                full_name            text,
+                full_name_html       text,
+                name_status          text,
+                citation             text,
+                citation_html        text,
+                year                 int,
+                iso_publication_date text,
+                page                 text,
+                misapplied           boolean,
+                sort_name            text
+            )
+    language sql
+as
+$$
 select i.id,
        i.uri,
        it.of_label as instance_type,
@@ -2423,16 +2492,18 @@ select i.id,
        ns.name,
        r.citation,
        r.citation_html,
-       r.year,
+       ref_year(iso_date),
+       iso_date,
        i.page,
        it.misapplied,
        n.sort_name
 from instance i
-       join instance_type it on i.instance_type_id = it.id
-       join instance cites on i.cited_by_id = cites.id
-       join name n on cites.name_id = n.id
-       join name_status ns on n.name_status_id = ns.id
-       join reference r on i.reference_id = r.id
+         join instance_type it on i.instance_type_id = it.id
+         join instance cites on i.cited_by_id = cites.id
+         join name n on cites.name_id = n.id
+         join name_status ns on n.name_status_id = ns.id
+         join reference r on i.reference_id = r.id
+         left outer join ref_parent_date(r.id) iso_date on true
 where i.id = instanceid
   and it.relationship;
 $$;
@@ -2480,56 +2551,73 @@ from apni_synonym(instanceid) syn;
 $$;
 
 -- apni ordered references for a name
-
 drop function if exists apni_ordered_references(bigint);
 create function apni_ordered_references(nameid bigint)
-  returns TABLE(instance_id   bigint,
-                instance_uri text,
-                instance_type text,
-                citation      text,
-                citation_html text,
-                year          int,
-                pages         text,
-                page          text)
-language sql
-as $$
-select i.id, i.uri, it.name, r.citation, r.citation_html, r.year, r.pages, coalesce(i.page, citedby.page, '-')
+    returns TABLE
+            (
+                instance_id          bigint,
+                instance_uri         text,
+                instance_type        text,
+                citation             text,
+                citation_html        text,
+                year                 int,
+                iso_publication_date text,
+                pages                text,
+                page                 text
+            )
+    language sql
+as
+$$
+select i.id,
+       i.uri,
+       it.name,
+       r.citation,
+       r.citation_html,
+       ref_year(iso_date),
+       iso_date,
+       r.pages,
+       coalesce(i.page, citedby.page, '-')
 from instance i
-       join reference r on i.reference_id = r.id
-       join instance_type it on i.instance_type_id = it.id
-       left outer join instance citedby on i.cited_by_id = citedby.id
+         join reference r on i.reference_id = r.id
+         join instance_type it on i.instance_type_id = it.id
+         left outer join instance citedby on i.cited_by_id = citedby.id
+         left outer join ref_parent_date(r.id) iso_date on true
 where i.name_id = nameid
-group by r.id, i.id, it.id, citedby.id
-order by r.year, it.protologue, it.primary_instance, r.citation, r.pages, i.page, r.id;
+group by r.id, iso_date, i.id, it.id, citedby.id
+order by iso_date, it.protologue, it.primary_instance, r.citation, r.pages, i.page, r.id;
 $$;
 
 -- get the synonyms of an instance as html to store in the tree in apni synonymy order
-
 drop function if exists synonym_as_html(bigint);
 create function synonym_as_html(instanceid bigint)
-  returns TABLE(html text)
-  language sql
+    returns TABLE
+            (
+                html text
+            )
+    language sql
 as
 $$
 SELECT CASE
-         WHEN it.nomenclatural
-           THEN '<nom>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
-                '</name-status> <year>(' || year || ')<year> <type>' || instance_type || '</type></nom>'
-         WHEN it.taxonomic
-           THEN '<tax>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
-                '</name-status> <year>(' || year || ')<year> <type>' || instance_type || '</type></tax>'
-         WHEN it.misapplied
-           THEN '<mis>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
-                '</name-status><type>' || instance_type || '</type> by <citation>' ||
-                citation_html || '</citation></mis>'
-         WHEN it.synonym
-           THEN '<syn>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
-                '</name-status> <year>(' || year || ')<year> <type>' || it.name || '</type></syn>'
-         ELSE '<oth>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
-              '</name-status> <type>' || it.name || '</type></oth>'
-         END
+           WHEN it.nomenclatural
+               THEN '<nom>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                    '</name-status> <year>(' || iso_publication_date || ')</year> <type>' || instance_type ||
+                    '</type></nom>'
+           WHEN it.taxonomic
+               THEN '<tax>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                    '</name-status> <year>(' || iso_publication_date || ')</year> <type>' || instance_type ||
+                    '</type></tax>'
+           WHEN it.misapplied
+               THEN '<mis>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                    '</name-status><type>' || instance_type || '</type> by <citation>' ||
+                    citation_html || '</citation></mis>'
+           WHEN it.synonym
+               THEN '<syn>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                    '</name-status> <year>(' || iso_publication_date || ')</year> <type>' || it.name || '</type></syn>'
+           ELSE '<oth>' || full_name_html || '<name-status class="' || name_status || '">, ' || name_status ||
+                '</name-status> <type>' || it.name || '</type></oth>'
+           END
 FROM apni_ordered_synonymy(instanceid)
-       join instance_type it on instance_type_id = it.id
+         join instance_type it on instance_type_id = it.id
 $$;
 
 drop function if exists synonyms_as_html(bigint);
@@ -2945,7 +3033,9 @@ alter table dist_entry add constraint de_unique_region unique (region_id, tree_e
 -- make sure iso_publication_date is a date
 alter table reference add constraint check_iso_date check(is_iso8601(iso_publication_date));
 
-INSERT INTO db_version (id, version) VALUES (1, 34);
+INSERT INTO db_version (id, version) VALUES (1, 35);
+
+create index iso_pub_index on reference (iso_publication_date asc);
 
 -- populate-lookup-tables.sql
 -- Populate lookup tables (currently botanical)
@@ -4072,13 +4162,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON tree TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_version_element TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element TO web;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dist_region TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO webapni;
-GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO webapni;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_region TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_status_dist_status TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dist_entry_dist_status TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tree_element_distribution_entries TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON name_resources TO web;
 
 GRANT SELECT, UPDATE ON nsl_global_seq TO web;
 GRANT SELECT, UPDATE ON hibernate_sequence TO web;
@@ -4088,6 +4178,8 @@ GRANT SELECT ON instance_resource_vw TO web;
 GRANT SELECT ON name_detail_synonyms_vw TO web;
 GRANT SELECT ON name_details_vw TO web;
 GRANT SELECT ON name_detail_commons_vw TO web;
+GRANT SELECT ON name_view TO web;
+GRANT SELECT ON taxon_veiw TO web;
 
 GRANT SELECT ON id_mapper TO read_only;
 GRANT SELECT ON author TO read_only;
