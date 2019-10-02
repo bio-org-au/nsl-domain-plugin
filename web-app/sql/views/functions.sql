@@ -872,9 +872,13 @@ with m(k, v) as (values ('', ''),
                         ('10', 'October'),
                         ('11', 'November'),
                         ('12', 'December'))
-select trim(split_part(isodate, '-', 3) ||
+select trim(coalesce(day.d, '')  ||
             ' ' || coalesce(m.v, '') ||
-            ' ' || split_part(isodate, '-', 1))
-from m
-where m.k = split_part(isodate, '-', 2) or m.k = '00'
+            ' ' || year)
+from m,
+     (select nullif(split_part(isodate, '-', 3),'')::numeric::text d) day,
+     split_part(isodate, '-', 2) month,
+     split_part(isodate, '-', 1) year
+where m.k = month
+   or (month = '' and m.k = '00')
 $$;
