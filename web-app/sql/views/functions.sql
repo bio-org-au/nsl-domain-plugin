@@ -13,7 +13,8 @@ select coalesce(
                  left join instance bas_inst
                  join name bas_name on bas_inst.name_id = bas_name.id
                  join instance_type bas_it on bas_inst.instance_type_id = bas_it.id and bas_it.name in ('basionym','replaced synonym')
-                 join instance cit_inst on bas_inst.cites_id = cit_inst.id on bas_inst.cited_by_id = primary_inst.id
+                 join instance cit_inst on bas_inst.cites_id = cit_inst.id
+                     on bas_inst.cited_by_id = primary_inst.id
                  join instance_type primary_it on primary_inst.instance_type_id = primary_it.id and primary_it.primary_instance
           where primary_inst.name_id = nameid
           limit 1), nameid);
