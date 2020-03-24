@@ -35,9 +35,11 @@ target(main: "Generate the NSL ddl sql from the current schema including views")
     File nslDdl = new File(dataDir, "nsl-ddl.sql")
     nslDdl.write(text)
     viewsDir.listFiles().sort().each { File view ->
+        println "Adding ${view.absolutePath}"
         nslDdl.append("\n-- ${view.name}\n")
         nslDdl.append(view.text)
     }
+
 }
 
 setDefaultTarget(main)
