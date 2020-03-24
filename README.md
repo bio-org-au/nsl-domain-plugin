@@ -84,3 +84,11 @@ There is a confluence page for the NSL infrastructure as well at https://www.anb
 You need to **set the shard sequence rang in the nsl-ddl.sql script before running it**. e.g.
 
 `create sequence nsl_global_seq minvalue 80000001 maxvalue 90000000;`
+
+Creating a clean Database
+====
+
+* Create a clean DB
+* use psql to run the nsl-ddl.sql command
+
+`creatdb mynsl && psql -f nsl-ddl.sql mynsl` 
