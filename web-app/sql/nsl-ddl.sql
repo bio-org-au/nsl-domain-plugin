@@ -117,10 +117,10 @@
         drop constraint if exists FK_r67um91pujyfrx7h1cifs3cmb;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
+        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
 
     alter table if exists name_resources 
-        drop constraint if exists FK_goyj9wmbb1y4a6y4q5ww3nhby;
+        drop constraint if exists FK_nhx4nd4uceqs7n5abwfeqfun5;
 
     alter table if exists name_status 
         drop constraint if exists FK_swotu3c2gy1hp8f6ekvuo7s26;
@@ -183,10 +183,10 @@
         drop constraint if exists FK_5sv181ivf7oybb6hud16ptmo5;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
+        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
 
     alter table if exists tree_element_distribution_entries 
-        drop constraint if exists FK_h7k45ugqa75w0860tysr4fgrt;
+        drop constraint if exists FK_fmic32f9o0fplk3xdix1yu6ha;
 
     alter table if exists tree_version 
         drop constraint if exists FK_tiniptsqbb5fgygt1idm1isfy;
@@ -620,8 +620,8 @@
     );
 
     create table name_resources (
-        resource_id int8 not null,
         name_id int8 not null,
+        resource_id int8 not null,
         primary key (name_id, resource_id)
     );
 
@@ -847,8 +847,8 @@
     );
 
     create table tree_element_distribution_entries (
-        dist_entry_id int8 not null,
         tree_element_id int8 not null,
+        dist_entry_id int8 not null,
         primary key (tree_element_id, dist_entry_id)
     );
 
@@ -1265,14 +1265,14 @@
         references name_rank;
 
     alter table if exists name_resources 
-        add constraint FK_nhx4nd4uceqs7n5abwfeqfun5 
-        foreign key (name_id) 
-        references name;
-
-    alter table if exists name_resources 
         add constraint FK_goyj9wmbb1y4a6y4q5ww3nhby 
         foreign key (resource_id) 
         references resource;
+
+    alter table if exists name_resources 
+        add constraint FK_nhx4nd4uceqs7n5abwfeqfun5 
+        foreign key (name_id) 
+        references name;
 
     alter table if exists name_status 
         add constraint FK_swotu3c2gy1hp8f6ekvuo7s26 
@@ -1375,14 +1375,14 @@
         references tree_element;
 
     alter table if exists tree_element_distribution_entries 
-        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
-        foreign key (tree_element_id) 
-        references tree_element;
-
-    alter table if exists tree_element_distribution_entries 
         add constraint FK_h7k45ugqa75w0860tysr4fgrt 
         foreign key (dist_entry_id) 
         references dist_entry;
+
+    alter table if exists tree_element_distribution_entries 
+        add constraint FK_fmic32f9o0fplk3xdix1yu6ha 
+        foreign key (tree_element_id) 
+        references tree_element;
 
     alter table if exists tree_version 
         add constraint FK_tiniptsqbb5fgygt1idm1isfy 
@@ -1707,7 +1707,8 @@ SELECT w.name_element,
        w.rank,
        w.sort_order
 FROM walk w
-WHERE w.sort_order = rank_sort_order
+WHERE w.sort_order >= rank_sort_order
+order by w.sort_order asc
 limit 1
 $$;
 
