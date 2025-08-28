@@ -46,6 +46,7 @@ class Instance {
     Timestamp createdAt
 
     String cachedSynonymyHtml  // cache for the current synonymyHtml used on a tree
+    boolean uncited = false
 
     static hasMany = [
             instancesForCitedBy: Instance,
@@ -71,6 +72,7 @@ class Instance {
         uri sqlType: 'text'
         validRecord defaultvalue: "false"
         draft defaultvalue: "false"
+        uncited defaultvalue: "false"
 
         sourceId index: 'Instance_Source_Index'
         sourceIdString index: 'Instance_Source_String_Index'
