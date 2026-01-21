@@ -44,6 +44,8 @@ class Reference {
     String bhlUrl
     String tl2
     RefType refType
+    String url
+    String versionLabel
 
     Reference parent
     Author author
