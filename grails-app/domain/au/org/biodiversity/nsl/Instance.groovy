@@ -54,7 +54,8 @@ class Instance {
             instancesForParent : Instance,
             instanceNotes      : InstanceNote,
             comments           : Comment,
-            resources          : Resource
+            resources          : Resource,
+            instanceResources  : InstanceResource
     ]
     static belongsTo = [Name, Namespace, Reference]
 

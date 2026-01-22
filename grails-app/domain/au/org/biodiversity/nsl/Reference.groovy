@@ -70,7 +70,8 @@ class Reference {
             instances               : Instance,
             referencesForDuplicateOf: Reference,
             referencesForParent     : Reference,
-            comments                : Comment
+            comments                : Comment,
+            referenceResources      : ReferenceResource
     ]
     static belongsTo = [Language, Namespace, RefAuthorRole, RefType]
 

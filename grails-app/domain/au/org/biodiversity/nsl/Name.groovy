@@ -77,7 +77,8 @@ class Name {
             instances: Instance,
             comments : Comment,
             tags     : NameTagName,
-            resources: Resource
+            resources: Resource,
+            nameResources: NameResource
     ]
 
     static mappedBy = [
