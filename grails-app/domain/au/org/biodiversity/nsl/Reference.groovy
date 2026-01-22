@@ -127,6 +127,8 @@ class Reference {
         tl2 nullable: true, maxSize: 30
         citation nullable: true, maxSize: 4000
         citationHtml nullable: true, maxSize: 4000
+        url nullable: true
+        versionLabel nullable: true
 
         updatedBy maxSize: 1000
         sourceSystem nullable: true, maxSize: 50
