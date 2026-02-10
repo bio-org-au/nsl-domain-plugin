@@ -25,6 +25,7 @@ class TreeElement {
     String sourceElementLink //Link to the source tree element for composed trees
     String nameLink
     String instanceLink
+    TreeVersion firstTreeVersion
 
     String updatedBy
     Timestamp updatedAt
@@ -58,6 +59,7 @@ class TreeElement {
         synonyms nullable: true
         rank maxSize: 50
         nameElement maxSize: 255
+        firstTreeVersion nullable: true
     }
 
     boolean equals(o) {
