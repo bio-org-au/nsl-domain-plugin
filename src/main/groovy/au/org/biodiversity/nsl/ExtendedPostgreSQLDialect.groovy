@@ -16,6 +16,8 @@ class ExtendedPostgreSQLDialect extends PostgreSQL9Dialect {
         super()
         registerFunction("regex", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(lower(f_unaccent(?1)) ~ lower(f_unaccent(?2)))"))
         registerFunction("iregex", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(lower(f_unaccent(?1)) ~* lower(f_unaccent(?2)))"))
+        registerFunction("regex_raw", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(?1 ~ ?2)"))
+        registerFunction("iregex_raw", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(?1 ~* ?2)"))
         registerFunction("not_regex", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(lower(f_unaccent(?1)) !~ lower(f_unaccent(?2)))"))
         registerFunction("not_iregex", new SQLFunctionTemplate(StandardBasicTypes.BOOLEAN, "(lower(f_unaccent(?1)) !~* lower(f_unaccent(?2)))"))
         registerColumnType(Types.ARRAY, 'array')
