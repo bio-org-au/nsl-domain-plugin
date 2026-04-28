@@ -1,0 +1,59 @@
+
+ALTER TABLE instance_resource DROP COLUMN api_name, DROP COLUMN api_at;
+ALTER TABLE name_resource DROP COLUMN api_name, DROP COLUMN api_at;
+ALTER TABLE nsl_name_rank DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE product DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE product_item_config DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE profile_item DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE profile_item_annotation DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE profile_item_reference DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE profile_item_type DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE profile_object_type DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE reference_resource DROP COLUMN api_name, DROP COLUMN api_at;
+ALTER TABLE profile_text DROP COLUMN api_name, DROP COLUMN api_date;
+
+
+
+ALTER TABLE name
+    ADD COLUMN delete_at TIMESTAMPTZ,
+  ADD COLUMN api_name TEXT,
+  ADD COLUMN api_at TIMESTAMPTZ;
+
+ALTER TABLE instance
+    ADD COLUMN delete_at TIMESTAMPTZ,
+  ADD COLUMN api_name TEXT,
+  ADD COLUMN api_at TIMESTAMPTZ;
+
+-- Tables with 2 new columns
+ALTER TABLE author ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE comment ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE event_record ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE instance_note ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE instance_resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE name_resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE name_tag_name ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE nsl_name_rank ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE nsl_simple_name_export ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE org ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE product ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE product_item_config ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE product_role ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_item ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_item_annotation ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_item_reference ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_item_type ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_object_type ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE profile_text ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE reference ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE reference_resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE resource_host ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE roles ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE site ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE user_product_role ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
+
+-- Update version
+UPDATE db_version
+SET version = 42
+WHERE id = 1;

@@ -24,7 +24,7 @@ class NslDomainService {
     def grailsApplication
     SessionFactory sessionFactory
 
-    static final Integer currentVersion = 41
+    static final Integer currentVersion = 42
 
     @SuppressWarnings("unused")
     File getDdlFile() {
