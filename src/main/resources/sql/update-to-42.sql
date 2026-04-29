@@ -1,7 +1,6 @@
 
 ALTER TABLE instance_resource DROP COLUMN api_name, DROP COLUMN api_at;
 ALTER TABLE name_resource DROP COLUMN api_name, DROP COLUMN api_at;
-ALTER TABLE nsl_name_rank DROP COLUMN api_name, DROP COLUMN api_date;
 ALTER TABLE product DROP COLUMN api_name, DROP COLUMN api_date;
 ALTER TABLE product_item_config DROP COLUMN api_name, DROP COLUMN api_date;
 ALTER TABLE profile_item DROP COLUMN api_name, DROP COLUMN api_date;
@@ -32,7 +31,6 @@ ALTER TABLE instance_note ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPT
 ALTER TABLE instance_resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
 ALTER TABLE name_resource ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
 ALTER TABLE name_tag_name ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
-ALTER TABLE nsl_name_rank ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
 ALTER TABLE nsl_simple_name_export ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
 ALTER TABLE org ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
 ALTER TABLE product ADD COLUMN api_name TEXT, ADD COLUMN api_at TIMESTAMPTZ;
