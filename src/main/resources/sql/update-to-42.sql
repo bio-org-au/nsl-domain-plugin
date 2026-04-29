@@ -1,15 +1,15 @@
 
-ALTER TABLE instance_resource DROP COLUMN api_name, DROP COLUMN api_at;
-ALTER TABLE name_resource DROP COLUMN api_name, DROP COLUMN api_at;
-ALTER TABLE product DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE product_item_config DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE profile_item DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE profile_item_annotation DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE profile_item_reference DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE profile_item_type DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE profile_object_type DROP COLUMN api_name, DROP COLUMN api_date;
-ALTER TABLE reference_resource DROP COLUMN api_name, DROP COLUMN api_at;
-ALTER TABLE profile_text DROP COLUMN api_name, DROP COLUMN api_date;
+ALTER TABLE instance_resource DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_at;
+ALTER TABLE name_resource DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_at;
+ALTER TABLE product DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE product_item_config DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE profile_item DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE profile_item_annotation DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE profile_item_reference DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE profile_item_type DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE profile_object_type DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
+ALTER TABLE reference_resource DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_at;
+ALTER TABLE profile_text DROP COLUMN IF EXISTS api_name, DROP COLUMN IF EXISTS api_date;
 
 
 
