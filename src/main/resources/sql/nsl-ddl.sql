@@ -290,25 +290,14 @@ CREATE INDEX logged_actions_action_idx ON audit.logged_actions(action);
 CREATE INDEX logged_actions_id_idx ON audit.logged_actions(id);
 
 
-
-
-
-CREATE OR REPLACE FUNCTION audit.if_modified_tree_element() RETURNS TRIGGER AS $body$
+CREATE OR REPLACE FUNCTION audit.if_modified_func() RETURNS trigger as $body$
 DECLARE
     audit_row audit.logged_actions;
     excluded_cols text[] = ARRAY[]::text[];
     included_cols text[];
     xtra_cols text[];
     monitored_fields hstore;
-    old_distribution text;
-    old_comment text;
-    new_distribution text;
-    new_comment text;
-    updated_at text;
-    updated_by text;
-    tree record;
 BEGIN
-    select * from tree into tree;
     IF TG_WHEN <> 'AFTER' THEN
         RAISE EXCEPTION 'audit.if_modified_func() may only run as an AFTER trigger';
     END IF;
@@ -329,7 +318,88 @@ BEGIN
         substring(TG_OP,1,1),                         -- action
         NULL, NULL,                                   -- row_data, changed_fields
         'f',                                           -- statement_only
-        NULL                                        -- id of tuple
+        COALESCE(NEW.id, OLD.id)                       -- id of tuple
+        );
+
+    IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
+        audit_row.client_query = NULL;
+    END IF;
+
+    IF TG_LEVEL = 'ROW' THEN
+        IF TG_ARGV[1] = 'i' THEN
+            included_cols = TG_ARGV[2]::text[];
+        ELSIF TG_ARGV[1] = 'e' THEN
+            excluded_cols = TG_ARGV[2]::text[];
+        END IF;
+        xtra_cols = TG_ARGV[3]::text[];
+        IF TG_OP = 'UPDATE' THEN
+            audit_row.row_data = hstore(OLD.*);
+            monitored_fields = (slice(hstore(NEW.*),included_cols) - audit_row.row_data) - excluded_cols;
+            audit_row.changed_fields = monitored_fields || slice(hstore(NEW.*),xtra_cols);
+            IF monitored_fields = hstore('') THEN
+                -- All changed fields are ignored. Skip this update.
+                RETURN NULL;
+            END IF;
+        ELSIF TG_OP = 'DELETE' THEN
+            audit_row.row_data = (slice(hstore(OLD.*),included_cols) - excluded_cols) || slice(hstore(OLD.*),xtra_cols);
+        ELSIF TG_OP = 'INSERT' THEN
+            audit_row.row_data = (slice(hstore(NEW.*),included_cols) - excluded_cols) || slice(hstore(NEW.*),xtra_cols);
+        END IF;
+    ELSIF (TG_LEVEL = 'STATEMENT' AND TG_OP IN ('INSERT','UPDATE','DELETE','TRUNCATE')) THEN
+        audit_row.statement_only = 't';
+    ELSE
+        RAISE EXCEPTION '[audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
+        RETURN NULL;
+    END IF;
+    INSERT INTO audit.logged_actions VALUES (audit_row.*);
+    RETURN NULL;
+END;
+$body$
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = pg_catalog, public;
+
+COMMENT ON FUNCTION audit.if_modified_func() IS $body$
+Track changes to tuples at the statement and/or row level.
+$body$;
+
+CREATE OR REPLACE FUNCTION audit.if_modified_tree_element() RETURNS TRIGGER AS $body$
+DECLARE
+    audit_row audit.logged_actions;
+    excluded_cols text[] = ARRAY[]::text[];
+    included_cols text[];
+    xtra_cols text[];
+    monitored_fields hstore;
+    old_distribution text;
+    old_comment text;
+    new_distribution text;
+    new_comment text;
+    updated_at text;
+    updated_by text;
+    tree record;
+BEGIN
+    select * from tree where name='APC' into tree;
+    IF TG_WHEN <> 'AFTER' THEN
+        RAISE EXCEPTION 'audit.if_modified_func() may only run as an AFTER trigger';
+    END IF;
+    audit_row = ROW(
+        nextval('audit.logged_actions_event_id_seq'), -- event_id
+        TG_TABLE_SCHEMA::text,                        -- schema_name
+        TG_TABLE_NAME::text,                          -- table_name
+        TG_RELID,                                     -- relation OID for much quicker searches
+                session_user::text,                           -- session_user_name
+                current_timestamp,                            -- action_tstamp_tx
+        statement_timestamp(),                        -- action_tstamp_stm
+        clock_timestamp(),                            -- action_tstamp_clk
+        txid_current(),                               -- transaction ID
+        current_setting('application_name'),          -- client application
+        inet_client_addr(),                           -- client_addr
+        inet_client_port(),                           -- client_port
+        current_query(),                              -- top-level query or queries (if multistatement) from client
+        substring(TG_OP,1,1),                         -- action
+        NULL, NULL,                                   -- row_data, changed_fields
+        'f',                                          -- statement_only
+        COALESCE(NEW.id, OLD.id)                       -- id of tuple
         );
 
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
@@ -512,7 +582,7 @@ DROP MATERIALIZED VIEW IF EXISTS name_view;
 
 -- --- name-view uses these functions
 DROP FUNCTION IF EXISTS find_rank(BIGINT, INT);
-CREATE FUNCTION find_rank(name_id BIGINT, rank_sort_order INT)
+CREATE OR REPLACE FUNCTION find_rank(name_id BIGINT, rank_sort_order INT)
     RETURNS TABLE
             (
                 name_element TEXT,
@@ -527,8 +597,8 @@ WITH RECURSIVE walk (parent_id, name_element, rank, sort_order) AS (
            n.name_element,
            r.name,
            r.sort_order
-    FROM name n
-             JOIN name_rank r ON n.name_rank_id = r.id
+    FROM public.name n
+             JOIN public.name_rank r ON n.name_rank_id = r.id
     WHERE n.id = name_id
       AND r.sort_order >= rank_sort_order
     UNION ALL
@@ -537,8 +607,8 @@ WITH RECURSIVE walk (parent_id, name_element, rank, sort_order) AS (
            r.name,
            r.sort_order
     FROM walk w,
-         name n
-             JOIN name_rank r ON n.name_rank_id = r.id
+         public.name n
+             JOIN public.name_rank r ON n.name_rank_id = r.id
     WHERE n.id = w.parent_id
       AND r.sort_order >= rank_sort_order
 )
