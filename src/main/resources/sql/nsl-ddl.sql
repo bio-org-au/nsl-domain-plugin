@@ -259,7 +259,8 @@ CREATE TABLE audit.logged_actions (
   row_data hstore,
   changed_fields hstore,
   statement_only boolean not null,
-  id int8
+  id int8,
+  updated_by varchar(50) not null
 );
 
 REVOKE ALL ON audit.logged_actions FROM public;

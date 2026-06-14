@@ -57,7 +57,8 @@ CREATE TABLE audit.logged_actions (
   row_data hstore,
   changed_fields hstore,
   statement_only boolean not null,
-  id int8
+  id int8,
+  updated_by varchar(50) not null
 );
 
 REVOKE ALL ON audit.logged_actions FROM public;
@@ -114,7 +115,8 @@ BEGIN
         substring(TG_OP,1,1),                         -- action
         NULL, NULL,                                   -- row_data, changed_fields
         'f',                                           -- statement_only
-        NULL                                        -- id of tuple
+        NULL,                                        -- id of tuple
+        COALESCE(NEW.changed_by, OLD.changed_by)     -- last person mentioned in change
         );
 
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
@@ -224,7 +226,8 @@ BEGIN
         substring(TG_OP,1,1),                         -- action
         NULL, NULL,                                   -- row_data, changed_fields
         'f',                                           -- statement_only
-        NULL                                        -- id of tuple
+        NULL,                                        -- id of tuple
+        COALESCE(NEW.changed_by, OLD.changed_by)     -- last person mentioned in change
         );
 
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
@@ -285,7 +288,7 @@ $body$
     SECURITY DEFINER
     SET search_path = pg_catalog, public;
 
-COMMENT ON FUNCTION apni.audit.if_modified_tree_element() IS $body$
+COMMENT ON FUNCTION audit.if_modified_tree_element() IS $body$
 Track changes to tree_element at the statement and/or row level.
 $body$;
 
@@ -400,4 +403,4 @@ select audit.audit_table('instance_note', 't', 't', 'i',
                          ARRAY['created_at', 'created_by', 'updated_at', 'updated_by']::text[]);
 
 select audit.audit_table('public.tree_element', 't', 't', 'i', ARRAY['id']::text[],
-                         ARRAY[]::text[], 'audit.if_modified_tree_element');
+                         ARRAY['created_at', 'created_by', 'updated_at', 'updated_by'], 'audit.if_modified_tree_element');
