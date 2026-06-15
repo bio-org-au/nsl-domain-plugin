@@ -116,7 +116,7 @@ BEGIN
         NULL, NULL,                                   -- row_data, changed_fields
         'f',                                           -- statement_only
         NULL,                                        -- id of tuple
-        COALESCE(NEW.changed_by, OLD.changed_by)     -- last person mentioned in change
+        COALESCE(NEW.updated_by, OLD.updated_by)     -- last person mentioned in change
         );
 
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
@@ -227,7 +227,7 @@ BEGIN
         NULL, NULL,                                   -- row_data, changed_fields
         'f',                                           -- statement_only
         NULL,                                        -- id of tuple
-        COALESCE(NEW.changed_by, OLD.changed_by)     -- last person mentioned in change
+        COALESCE(NEW.updated_by, OLD.updated_by)     -- last person mentioned in change
         );
 
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
