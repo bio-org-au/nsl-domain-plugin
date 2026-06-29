@@ -416,12 +416,17 @@ BEGIN
         xtra_cols = TG_ARGV[3]::text[];
         IF TG_OP = 'UPDATE' THEN
             audit_row.row_data = hstore(OLD.*);
-            monitored_fields = (slice(hstore(NEW.*),included_cols) - audit_row.row_data) - excluded_cols;
+            monitored_fields = (hstore(NEW.*) - audit_row.row_data) - excluded_cols;
+            audit_row.changed_fields = monitored_fields || slice(hstore(NEW.*),xtra_cols);
+            IF monitored_fields = hstore('') THEN
+                -- All changed fields are ignored. Skip this update.
+                RETURN NULL;
+            END IF;
             new_distribution = NEW.profile -> (tree.config ->> 'distribution_key') ->> 'value';
             new_comment = NEW.profile -> (tree.config ->> 'comment_key') ->> 'value';
             old_distribution = OLD.profile -> (tree.config ->> 'distribution_key') ->> 'value';
             old_comment = OLD.profile -> (tree.config ->> 'comment_key') ->> 'value';
-            IF old_distribution <> new_distribution or old_distribution is null or new_distribution is null THEN
+            IF old_distribution IS DISTINCT FROM new_distribution THEN
                 updated_at = NEW.profile -> (tree.config ->> 'distribution_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = NEW.profile -> (tree.config ->> 'distribution_key') ->> 'updated_by';
@@ -429,10 +434,9 @@ BEGIN
                 updated_at = OLD.profile -> (tree.config ->> 'distribution_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = OLD.profile -> (tree.config ->> 'distribution_key') ->> 'updated_by';
-                audit_row.row_data = hstore(ARRAY['id', OLD.id::text, 'distribution', old_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
-                INSERT INTO audit.logged_actions VALUES (audit_row.*);
+                audit_row.row_data = audit_row.row_date || hstore(ARRAY['id', OLD.id::text, 'distribution', old_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
             END IF;
-            IF old_comment <> new_comment or old_comment is null or new_comment is null THEN
+            IF old_comment IS DISTINCT FROM new_comment THEN
                 audit_row.event_id = nextval('audit.logged_actions_event_id_seq');
                 updated_at = NEW.profile -> (tree.config ->> 'comment_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
@@ -441,8 +445,7 @@ BEGIN
                 updated_at = OLD.profile -> (tree.config ->> 'comment_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = OLD.profile -> (tree.config ->> 'comment_key') ->> 'updated_by';
-                audit_row.row_data = hstore(ARRAY['id', OLD.id::text, 'comment', old_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
-                INSERT INTO audit.logged_actions VALUES (audit_row.*);
+                audit_row.row_data = audit_row.row_date || hstore(ARRAY['id', OLD.id::text, 'comment', old_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
             END IF;
         ELSIF TG_OP = 'DELETE' THEN
         ELSIF TG_OP = 'INSERT' THEN
@@ -454,6 +457,7 @@ BEGIN
         RAISE EXCEPTION '[audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
         RETURN NULL;
     END IF;
+    INSERT INTO audit.logged_actions VALUES (audit_row.*);
     RETURN NULL;
 END;
 $body$
@@ -575,8 +579,9 @@ select audit.audit_table('instance_note', 't', 't', 'i',
                          ARRAY['id', 'instance_note_key_id', 'value']::text[],
                          ARRAY['created_at', 'created_by', 'updated_at', 'updated_by']::text[]);
 
-select audit.audit_table('public.tree_element', 't', 't', 'i', ARRAY['id']::text[],
-                         ARRAY[]::text[], 'audit.if_modified_tree_element');
+select audit.audit_table('public.tree_element', 't', 't', 'i',
+                         ARRAY[]::text[],
+                         ARRAY['created_at', 'created_by', 'updated_at', 'updated_by']::text[], 'audit.if_modified_tree_element');
 
 -- export-name-view.sql
 DROP MATERIALIZED VIEW IF EXISTS name_view;
