@@ -415,9 +415,9 @@ BEGIN
         END IF;
         xtra_cols = TG_ARGV[3]::text[];
         IF TG_OP = 'UPDATE' THEN
-            audit_row.row_data = hstore(OLD.*);
-            monitored_fields = (hstore(NEW.*) - audit_row.row_data) - excluded_cols;
-            audit_row.changed_fields = monitored_fields || slice(hstore(NEW.*),xtra_cols);
+            audit_row.row_data = hstore(OLD.*) - 'profile'::text;
+            monitored_fields = (slice(hstore(NEW.*),included_cols) - audit_row.row_data) - excluded_cols;
+            audit_row.changed_fields = (monitored_fields || slice(hstore(NEW.*),xtra_cols)) - 'profile'::text;
             IF monitored_fields = hstore('') THEN
                 -- All changed fields are ignored. Skip this update.
                 RETURN NULL;
@@ -430,22 +430,22 @@ BEGIN
                 updated_at = NEW.profile -> (tree.config ->> 'distribution_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = NEW.profile -> (tree.config ->> 'distribution_key') ->> 'updated_by';
-                audit_row.changed_fields = hstore(ARRAY['id', NEW.id::text, 'distribution', new_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
+                audit_row.changed_fields = audit_row.changed_fields || hstore(ARRAY['id', NEW.id::text, 'distribution', new_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
                 updated_at = OLD.profile -> (tree.config ->> 'distribution_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = OLD.profile -> (tree.config ->> 'distribution_key') ->> 'updated_by';
-                audit_row.row_data = audit_row.row_date || hstore(ARRAY['id', OLD.id::text, 'distribution', old_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
+                audit_row.row_data = audit_row.row_data || hstore(ARRAY['id', OLD.id::text, 'distribution', old_distribution, 'updated_at', updated_at, 'updated_by', updated_by]);
             END IF;
             IF old_comment IS DISTINCT FROM new_comment THEN
                 audit_row.event_id = nextval('audit.logged_actions_event_id_seq');
                 updated_at = NEW.profile -> (tree.config ->> 'comment_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = NEW.profile -> (tree.config ->> 'comment_key') ->> 'updated_by';
-                audit_row.changed_fields = hstore(ARRAY['id', NEW.id::text, 'comment', new_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
+                audit_row.changed_fields = audit_row.changed_fields || hstore(ARRAY['id', NEW.id::text, 'comment', new_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
                 updated_at = OLD.profile -> (tree.config ->> 'comment_key') ->> 'updated_at';
                 updated_at = REPLACE(updated_at, 'T', ' ');
                 updated_by = OLD.profile -> (tree.config ->> 'comment_key') ->> 'updated_by';
-                audit_row.row_data = audit_row.row_date || hstore(ARRAY['id', OLD.id::text, 'comment', old_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
+                audit_row.row_data = audit_row.row_data || hstore(ARRAY['id', OLD.id::text, 'comment', old_comment, 'updated_at', updated_at, 'updated_by', updated_by]);
             END IF;
         ELSIF TG_OP = 'DELETE' THEN
         ELSIF TG_OP = 'INSERT' THEN
@@ -580,7 +580,7 @@ select audit.audit_table('instance_note', 't', 't', 'i',
                          ARRAY['created_at', 'created_by', 'updated_at', 'updated_by']::text[]);
 
 select audit.audit_table('public.tree_element', 't', 't', 'i',
-                         ARRAY[]::text[],
+                         ARRAY['id', 'instance_id', 'excluded', 'profile']::text[],
                          ARRAY['created_at', 'created_by', 'updated_at', 'updated_by']::text[], 'audit.if_modified_tree_element');
 
 -- export-name-view.sql
